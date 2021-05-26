@@ -237,7 +237,7 @@ int ConvertToUnicode(UINT CodePage, DWORD dwFlags, LPCSTR lpMultiByteStr, int cb
 
 	if (cbMultiByte == -1)
 	{
-		size_t len = strnlen(lpMultiByteStr, INT_MAX);
+		size_t len = strlen(lpMultiByteStr);
 		if (len >= INT_MAX)
 			return 0;
 		cbMultiByte = (int)(len + 1);
