@@ -94,7 +94,9 @@ static BOOL CALLBACK rfx_rlgr_init(PINIT_ONCE once, PVOID param, PVOID* context)
 	WINPR_UNUSED(param);
 	WINPR_UNUSED(context);
 
+#ifndef _M_ARM64
 	g_LZCNT = IsProcessorFeaturePresentEx(PF_EX_LZCNT);
+#endif
 	return TRUE;
 }
 
@@ -103,6 +105,7 @@ static inline UINT32 lzcnt_s(UINT32 x)
 	if (!x)
 		return 32;
 
+#ifndef _M_ARM64
 	if (!g_LZCNT)
 	{
 		UINT32 y = 0;
@@ -144,9 +147,11 @@ static inline UINT32 lzcnt_s(UINT32 x)
 
 		WINPR_ASSERT(n >= x);
 		return n - x;
+#ifndef _M_ARM64
 	}
 
 	return __lzcnt(x);
+#endif
 }
 
 int rfx_rlgr_decode(RLGR_MODE mode, const BYTE* WINPR_RESTRICT pSrcData, UINT32 SrcSize,
