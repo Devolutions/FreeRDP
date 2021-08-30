@@ -1046,7 +1046,6 @@ BOOL WLog_Init(void)
 BOOL WLog_Uninit(void)
 {
 	DWORD index;
-	wLog* child = NULL;
 	wLog* root = g_RootLog;
 
 	if (!root)
@@ -1056,7 +1055,7 @@ BOOL WLog_Uninit(void)
 
 	for (index = 0; index < root->ChildrenCount; index++)
 	{
-		child = root->Children[index];
+		wLog* child = root->Children[index];
 		WLog_Free(child);
 	}
 
