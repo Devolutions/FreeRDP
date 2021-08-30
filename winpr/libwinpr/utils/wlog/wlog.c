@@ -1054,7 +1054,7 @@ BOOL WLog_Uninit(void)
 
 	WLog_Lock(root);
 
-	for (index = 0; index < root->ChildrenCount; index)
+	for (index = 0; index < root->ChildrenCount; index++)
 	{
 		child = root->Children[index];
 		WLog_Free(child);
