@@ -3,6 +3,7 @@
 #include <freerdp/client/cmdline.h>
 #include <freerdp/client/cliprdr.h>
 #include <freerdp/event.h>
+#include <freerdp/settings.h>
 #include <freerdp/gdi/gdi.h>
 #include <freerdp/gdi/gfx.h>
 #include <freerdp/utils/signal.h>
@@ -724,14 +725,25 @@ BOOL csharp_freerdp_set_redirect_audio(void* instance, int redirectSound, BOOL r
 
 	char** p;
 	size_t count;
-	if(redirectSound == 0)
+
+	if (redirectSound == AUDIO_MODE_REDIRECT)
 	{
+		settings->AudioPlayback = TRUE;
 		p = freerdp_command_line_parse_comma_separated_values_offset("rdpsnd", NULL, &count);
 		freerdp_client_add_static_channel(settings, count, p);
 		free(p);
 	}
+	else if (redirectSound == AUDIO_MODE_PLAY_ON_SERVER)
+	{
+		settings->RemoteConsoleAudio = TRUE;
+	}
+	else if (redirectSound == AUDIO_MODE_NONE)
+	{
+		settings->AudioPlayback = FALSE;
+		settings->RemoteConsoleAudio = FALSE;
+	}
 
-	if(redirectCapture)
+	if (redirectCapture)
 	{
 		p = freerdp_command_line_parse_comma_separated_values_offset("audin", NULL, &count);
 		freerdp_client_add_dynamic_channel(settings, count, p);
