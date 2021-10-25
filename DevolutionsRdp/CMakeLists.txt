@@ -52,11 +52,7 @@ if(MSVC)
 	configure_msvc_runtime()
 endif()
 
-if(IOS)
-	set(TARGET_TYPE "STATIC")
-else()
-	set(TARGET_TYPE "SHARED")
-endif()
+set(TARGET_TYPE "SHARED")
 
 add_library(${MODULE_NAME} ${TARGET_TYPE} ${${MODULE_PREFIX}_HEADERS} ${${MODULE_PREFIX}_SOURCES} ${${MODULE_PREFIX}_RESOURCES})
 target_link_libraries(${MODULE_NAME} freerdp freerdp-client winpr)
@@ -69,17 +65,20 @@ if(WIN32)
 	target_link_libraries(${MODULE_NAME} winmm ntdsapi rpcrt4 dbghelp)
 endif()
 
-if(APPLE AND NOT IOS)
+if(APPLE)
 	find_library(CORE_AUDIO CoreAudio)
 	find_library(AUDIO_TOOLBOX AudioToolbox)
-	find_library(AUDIO_UNIT AudioUnit)
 	find_library(CORE_FOUNDATION CoreFoundation)
 	find_library(CORE_SERVICES CoreServices)
 	target_link_libraries(${MODULE_NAME} "${CORE_AUDIO}")
 	target_link_libraries(${MODULE_NAME} "${AUDIO_TOOLBOX}")
-	target_link_libraries(${MODULE_NAME} "${AUDIO_UNIT}")
 	target_link_libraries(${MODULE_NAME} "${CORE_FOUNDATION}")
 	target_link_libraries(${MODULE_NAME} "${CORE_SERVICES}")
+
+	if(IOS)
+		find_library(FOUNDATION Foundation)
+		target_link_libraries(${MODULE_NAME} "${FOUNDATION}")
+	endif()
 endif()
 
 set_target_properties(${MODULE_NAME} PROPERTIES PREFIX "")
@@ -89,3 +88,4 @@ install(TARGETS DevolutionsRdp
 	EXPORT DevolutionsRdp-target
 	ARCHIVE DESTINATION lib
 	LIBRARY DESTINATION lib)
+#endif()
