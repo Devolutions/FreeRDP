@@ -44,88 +44,88 @@ BOOL cs_client_global_init();
 
 static int cs_get_vk_code(int character)
 {
-    int _virtual_key_map[256] = {0};
-    
-    _virtual_key_map['0'] = VK_KEY_0;
-    _virtual_key_map['1'] = VK_KEY_1;
-    _virtual_key_map['2'] = VK_KEY_2;
-    _virtual_key_map['3'] = VK_KEY_3;
-    _virtual_key_map['4'] = VK_KEY_4;
-    _virtual_key_map['5'] = VK_KEY_5;
-    _virtual_key_map['6'] = VK_KEY_6;
-    _virtual_key_map['7'] = VK_KEY_7;
-    _virtual_key_map['8'] = VK_KEY_8;
-    _virtual_key_map['9'] = VK_KEY_9;
-    
-    _virtual_key_map['a'] = VK_KEY_A;
-    _virtual_key_map['b'] = VK_KEY_B;
-    _virtual_key_map['c'] = VK_KEY_C;
-    _virtual_key_map['d'] = VK_KEY_D;
-    _virtual_key_map['e'] = VK_KEY_E;
-    _virtual_key_map['f'] = VK_KEY_F;
-    _virtual_key_map['g'] = VK_KEY_G;
-    _virtual_key_map['h'] = VK_KEY_H;
-    _virtual_key_map['i'] = VK_KEY_I;
-    _virtual_key_map['j'] = VK_KEY_J;
-    _virtual_key_map['k'] = VK_KEY_K;
-    _virtual_key_map['l'] = VK_KEY_L;
-    _virtual_key_map['m'] = VK_KEY_M;
-    _virtual_key_map['n'] = VK_KEY_N;
-    _virtual_key_map['o'] = VK_KEY_O;
-    _virtual_key_map['p'] = VK_KEY_P;
-    _virtual_key_map['q'] = VK_KEY_Q;
-    _virtual_key_map['r'] = VK_KEY_R;
-    _virtual_key_map['s'] = VK_KEY_S;
-    _virtual_key_map['t'] = VK_KEY_T;
-    _virtual_key_map['u'] = VK_KEY_U;
-    _virtual_key_map['v'] = VK_KEY_V;
-    _virtual_key_map['w'] = VK_KEY_W;
-    _virtual_key_map['x'] = VK_KEY_X;
-    _virtual_key_map['y'] = VK_KEY_Y;
-    _virtual_key_map['z'] = VK_KEY_Z;
-    
-    return _virtual_key_map[character];
+	int _virtual_key_map[256] = {0};
+	
+	_virtual_key_map['0'] = VK_KEY_0;
+	_virtual_key_map['1'] = VK_KEY_1;
+	_virtual_key_map['2'] = VK_KEY_2;
+	_virtual_key_map['3'] = VK_KEY_3;
+	_virtual_key_map['4'] = VK_KEY_4;
+	_virtual_key_map['5'] = VK_KEY_5;
+	_virtual_key_map['6'] = VK_KEY_6;
+	_virtual_key_map['7'] = VK_KEY_7;
+	_virtual_key_map['8'] = VK_KEY_8;
+	_virtual_key_map['9'] = VK_KEY_9;
+	
+	_virtual_key_map['a'] = VK_KEY_A;
+	_virtual_key_map['b'] = VK_KEY_B;
+	_virtual_key_map['c'] = VK_KEY_C;
+	_virtual_key_map['d'] = VK_KEY_D;
+	_virtual_key_map['e'] = VK_KEY_E;
+	_virtual_key_map['f'] = VK_KEY_F;
+	_virtual_key_map['g'] = VK_KEY_G;
+	_virtual_key_map['h'] = VK_KEY_H;
+	_virtual_key_map['i'] = VK_KEY_I;
+	_virtual_key_map['j'] = VK_KEY_J;
+	_virtual_key_map['k'] = VK_KEY_K;
+	_virtual_key_map['l'] = VK_KEY_L;
+	_virtual_key_map['m'] = VK_KEY_M;
+	_virtual_key_map['n'] = VK_KEY_N;
+	_virtual_key_map['o'] = VK_KEY_O;
+	_virtual_key_map['p'] = VK_KEY_P;
+	_virtual_key_map['q'] = VK_KEY_Q;
+	_virtual_key_map['r'] = VK_KEY_R;
+	_virtual_key_map['s'] = VK_KEY_S;
+	_virtual_key_map['t'] = VK_KEY_T;
+	_virtual_key_map['u'] = VK_KEY_U;
+	_virtual_key_map['v'] = VK_KEY_V;
+	_virtual_key_map['w'] = VK_KEY_W;
+	_virtual_key_map['x'] = VK_KEY_X;
+	_virtual_key_map['y'] = VK_KEY_Y;
+	_virtual_key_map['z'] = VK_KEY_Z;
+	
+	return _virtual_key_map[character];
 }
 
 static int cs_get_unicode(int character)
 {
-    int _unicode_map[256] = {0};
-    
-    _unicode_map['-'] = 45;
-    _unicode_map['/'] = 47;
-    _unicode_map[':'] = 58;
-    _unicode_map[';'] = 59;
-    _unicode_map['('] = 40;
-    _unicode_map[')'] = 41;
-    _unicode_map['&'] = 38;
-    _unicode_map['@'] = 64;
-    _unicode_map['.'] = 46;
-    _unicode_map[','] = 44;
-    _unicode_map['?'] = 63;
-    _unicode_map['!'] = 33;
-    _unicode_map['\''] = 39;
-    _unicode_map['\"'] = 34;
-    
-    _unicode_map['['] = 91;
-    _unicode_map[']'] = 93;
-    _unicode_map['{'] = 123;
-    _unicode_map['}'] = 125;
-    _unicode_map['#'] = 35;
-    _unicode_map['%'] = 37;
-    _unicode_map['^'] = 94;
-    _unicode_map['*'] = 42;
-    _unicode_map['+'] = 43;
-    _unicode_map['='] = 61;
-    
-    _unicode_map['_'] = 95;
-    _unicode_map['\\'] = 92;
-    _unicode_map['|'] = 124;
-    _unicode_map['~'] = 126;
-    _unicode_map['<'] = 60;
-    _unicode_map['>'] = 62;
-    _unicode_map['$'] = 36;
-    
-    return _unicode_map[character];
+	int _unicode_map[256] = {0};
+	
+	_unicode_map['-'] = 45;
+	_unicode_map['/'] = 47;
+	_unicode_map[':'] = 58;
+	_unicode_map[';'] = 59;
+	_unicode_map['('] = 40;
+	_unicode_map[')'] = 41;
+	_unicode_map['&'] = 38;
+	_unicode_map['@'] = 64;
+	_unicode_map['.'] = 46;
+	_unicode_map[','] = 44;
+	_unicode_map['?'] = 63;
+	_unicode_map['!'] = 33;
+	_unicode_map['\''] = 39;
+	_unicode_map['\"'] = 34;
+	
+	_unicode_map['['] = 91;
+	_unicode_map[']'] = 93;
+	_unicode_map['{'] = 123;
+	_unicode_map['}'] = 125;
+	_unicode_map['#'] = 35;
+	_unicode_map['%'] = 37;
+	_unicode_map['^'] = 94;
+	_unicode_map['*'] = 42;
+	_unicode_map['+'] = 43;
+	_unicode_map['='] = 61;
+	
+	_unicode_map['_'] = 95;
+	_unicode_map['\\'] = 92;
+	_unicode_map['|'] = 124;
+	_unicode_map['~'] = 126;
+	_unicode_map['<'] = 60;
+	_unicode_map['>'] = 62;
+	_unicode_map['$'] = 36;
+	
+	return _unicode_map[character];
 }
 
 int cs_vrtchn_init(csContext* ctx, VirtChanContext* virtchan)
@@ -178,29 +178,29 @@ int cs_vrtchn_uninit(csContext* ctx, VirtChanContext* virtchan)
 
 static void cs_send_virtual_key(freerdp* instance, int vk, BOOL down)
 {
-    int flags;
-    DWORD scancode;
-    
-    scancode = GetVirtualScanCodeFromVirtualKeyCode(vk, 4);
-    flags = (down ? KBD_FLAGS_DOWN : KBD_FLAGS_RELEASE);
-    flags |= ((scancode & KBDEXT) ? KBD_FLAGS_EXTENDED : 0);
-    freerdp_input_send_keyboard_event(instance->input, flags, scancode);
+	int flags;
+	DWORD scancode;
+	
+	scancode = GetVirtualScanCodeFromVirtualKeyCode(vk, 4);
+	flags = (down ? KBD_FLAGS_DOWN : KBD_FLAGS_RELEASE);
+	flags |= ((scancode & KBDEXT) ? KBD_FLAGS_EXTENDED : 0);
+	freerdp_input_send_keyboard_event(instance->input, flags, scancode);
 }
 
 static void cs_send_unicode_key(freerdp* instance, int vk)
 {
-    freerdp_input_send_unicode_keyboard_event(instance->input, 0, vk);
+	freerdp_input_send_unicode_keyboard_event(instance->input, 0, vk);
 }
 
 void cs_OnChannelConnectedEventHandler(rdpContext* context, ChannelConnectedEventArgs* e)
 {
 	csContext* csc = (csContext*)context->instance->context;
 
-    if (strcmp(e->name, RDPGFX_DVC_CHANNEL_NAME) == 0)
-    {
-        gdi_graphics_pipeline_init(context->gdi, (RdpgfxClientContext*) e->pInterface);
-    }
-    else if (strcmp(e->name, CLIPRDR_SVC_CHANNEL_NAME) == 0)
+	if (strcmp(e->name, RDPGFX_DVC_CHANNEL_NAME) == 0)
+	{
+		gdi_graphics_pipeline_init(context->gdi, (RdpgfxClientContext*) e->pInterface);
+	}
+	else if (strcmp(e->name, CLIPRDR_SVC_CHANNEL_NAME) == 0)
 	{
 		cs_cliprdr_init(csc, (CliprdrClientContext*) e->pInterface);
 	}
@@ -214,11 +214,11 @@ void cs_OnChannelDisconnectedEventHandler(rdpContext* context, ChannelDisconnect
 {
 	csContext* csc = (csContext*)context->instance->context;
 
-    if (strcmp(e->name, RDPGFX_DVC_CHANNEL_NAME) == 0)
-    {
-        gdi_graphics_pipeline_uninit(context->gdi, (RdpgfxClientContext*) e->pInterface);
-    }
-    else if (strcmp(e->name, CLIPRDR_SVC_CHANNEL_NAME) == 0)
+	if (strcmp(e->name, RDPGFX_DVC_CHANNEL_NAME) == 0)
+	{
+		gdi_graphics_pipeline_uninit(context->gdi, (RdpgfxClientContext*) e->pInterface);
+	}
+	else if (strcmp(e->name, CLIPRDR_SVC_CHANNEL_NAME) == 0)
 	{
 		cs_cliprdr_uninit(csc, (CliprdrClientContext*) e->pInterface);
 	}
@@ -254,11 +254,11 @@ static void cs_context_free(freerdp* instance, rdpContext* context)
 
 static BOOL cs_pre_connect(freerdp* instance)
 {
-    rdpContext* context = instance->context;
+	rdpContext* context = instance->context;
 	rdpSettings* settings = instance->settings;
 	BOOL bitmap_cache = settings->BitmapCacheEnabled;
-    
-    ZeroMemory(settings->OrderSupport, 32);
+	
+	ZeroMemory(settings->OrderSupport, 32);
 	settings->OrderSupport[NEG_DSTBLT_INDEX] = TRUE;
 	settings->OrderSupport[NEG_PATBLT_INDEX] = TRUE;
 	settings->OrderSupport[NEG_SCRBLT_INDEX] = TRUE;
@@ -285,21 +285,21 @@ static BOOL cs_pre_connect(freerdp* instance)
 	settings->OrderSupport[NEG_ELLIPSE_CB_INDEX] = FALSE;
 
 	if (!freerdp_client_load_addins(context->channels, instance->settings))
-            return -1;
+			return -1;
 
-    PubSub_SubscribeChannelConnected(context->pubSub,
-                                     (pChannelConnectedEventHandler) cs_OnChannelConnectedEventHandler);
+	PubSub_SubscribeChannelConnected(context->pubSub,
+									 (pChannelConnectedEventHandler) cs_OnChannelConnectedEventHandler);
 
-    PubSub_SubscribeChannelDisconnected(context->pubSub,
-                                        (pChannelDisconnectedEventHandler) cs_OnChannelDisconnectedEventHandler);
+	PubSub_SubscribeChannelDisconnected(context->pubSub,
+										(pChannelDisconnectedEventHandler) cs_OnChannelDisconnectedEventHandler);
 
-    
+	
 
-    if (!context->cache)
-    {
-        if (!(context->cache = cache_new(settings)))
-            return FALSE;
-    }
+	if (!context->cache)
+	{
+		if (!(context->cache = cache_new(settings)))
+			return FALSE;
+	}
 
 	return TRUE;
 }
@@ -307,7 +307,7 @@ static BOOL cs_pre_connect(freerdp* instance)
 BOOL cs_begin_paint(rdpContext* context)
 {
 	rdpGdi* gdi = context->gdi;
-    
+	
 	gdi->primary->hdc->hwnd->invalid->null = 1;
 	return TRUE;
 }
@@ -318,11 +318,11 @@ BOOL cs_end_paint(rdpContext* context)
 	csContext* csc = (csContext*)context->instance->context;
 	INT32 x, y;
 	UINT32 w, h;
-    
-    if (gdi->primary->hdc->hwnd->invalid->null)
-        return TRUE;
+	
+	if (gdi->primary->hdc->hwnd->invalid->null)
+		return TRUE;
 
-    x = gdi->primary->hdc->hwnd->invalid->x;
+	x = gdi->primary->hdc->hwnd->invalid->x;
 	y = gdi->primary->hdc->hwnd->invalid->y;
 	w = gdi->primary->hdc->hwnd->invalid->w;
 	h = gdi->primary->hdc->hwnd->invalid->h;
@@ -373,14 +373,14 @@ static DWORD WINAPI freerdp_csharp_input_thread(LPVOID param)
 	rdpContext* context = (rdpContext*) param;
 	status = 1;
 	queue = freerdp_get_message_queue(context->instance,
-	                                  FREERDP_INPUT_MESSAGE_QUEUE);
+									  FREERDP_INPUT_MESSAGE_QUEUE);
 
 	while (MessageQueue_Wait(queue))
 	{
 		while (MessageQueue_Peek(queue, &message, TRUE))
 		{
 			status = freerdp_message_queue_process_message(context->instance,
-			         FREERDP_INPUT_MESSAGE_QUEUE, &message);
+					 FREERDP_INPUT_MESSAGE_QUEUE, &message);
 
 			if (!status)
 				break;
@@ -402,7 +402,7 @@ static BOOL cs_post_connect(freerdp* instance)
 	rdpSettings* settings = instance->settings;
 
 	update = instance->context->update;
-    
+	
 	assert(instance);
 
 	stride = settings->DesktopWidth * 4;
@@ -414,7 +414,7 @@ static BOOL cs_post_connect(freerdp* instance)
 	update->BeginPaint = cs_begin_paint;
 	update->EndPaint = cs_end_paint;
 	update->DesktopResize = cs_desktop_resize;
-    
+	
 	pointer_cache_register_callbacks(update);
 	cs_register_pointer((rdpContext*)context);
 
@@ -445,13 +445,13 @@ static int cs_verify_x509_certificate(freerdp* instance, BYTE* data, int length,
 
 void cs_error_info(void* ctx, ErrorInfoEventArgs* e)
 {
-    rdpContext* context = (rdpContext*) ctx;
-    csContext* csc = (csContext*)context->instance->context;
-    
-    if (csc->onError)
-    {
-        csc->onError(context->instance, e->code);
-    }
+	rdpContext* context = (rdpContext*) ctx;
+	csContext* csc = (csContext*)context->instance->context;
+	
+	if (csc->onError)
+	{
+		csc->onError(context->instance, e->code);
+	}
 }
 
 BOOL cs_client_global_init()
@@ -487,14 +487,14 @@ int RdpClientEntry(RDP_CLIENT_ENTRY_POINTS* pEntryPoints)
 }
 
 static char** freerdp_command_line_parse_comma_separated_values_offset(
-    const char* name, char* list, size_t* count)
+	const char* name, char* list, size_t* count)
 {
 	return freerdp_command_line_parse_comma_separated_values_ex(name, list, count);
 }
 
 static char** freerdp_command_line_parse_comma_separated_values_ex(const char* name,
-        const char* list,
-        size_t* count)
+		const char* list,
+		size_t* count)
 {
 	char** p;
 	char* str;
@@ -582,16 +582,16 @@ void* csharp_freerdp_new()
 {
 	void* context;
 	RDP_CLIENT_ENTRY_POINTS clientEntryPoints;
-    
-    ZeroMemory(&clientEntryPoints, sizeof(RDP_CLIENT_ENTRY_POINTS));
-    clientEntryPoints.Size = sizeof(RDP_CLIENT_ENTRY_POINTS);
-    
-    RdpClientEntry(&clientEntryPoints);
-    
+	
+	ZeroMemory(&clientEntryPoints, sizeof(RDP_CLIENT_ENTRY_POINTS));
+	clientEntryPoints.Size = sizeof(RDP_CLIENT_ENTRY_POINTS);
+	
+	RdpClientEntry(&clientEntryPoints);
+	
 	context = freerdp_client_context_new(&clientEntryPoints)->instance;
 	freerdp_register_addin_provider(cs_channels_load_static_addin_entry, 0);
 	
-    return context;
+	return context;
 }
 
 void csharp_freerdp_free(void* instance)
@@ -603,24 +603,24 @@ void csharp_freerdp_free(void* instance)
 
 BOOL csharp_freerdp_connect(void* instance)
 {
-    return freerdp_connect((freerdp*)instance);
+	return freerdp_connect((freerdp*)instance);
 }
 
 BOOL csharp_freerdp_disconnect(void* instance)
 {
-    freerdp* inst = (freerdp*)instance;
+	freerdp* inst = (freerdp*)instance;
 	csContext* context = (csContext*)inst->context;
 	rdpSettings* settings = inst->settings;
 
 	freerdp_disconnect(inst);
 
-    if (freerdp_client_stop(inst->context) != CHANNEL_RC_OK)
-        return FALSE;
+	if (freerdp_client_stop(inst->context) != CHANNEL_RC_OK)
+		return FALSE;
 
 	if (settings->AsyncInput && context->inputThread)
 		{
 			wMessageQueue* inputQueue = freerdp_get_message_queue(instance,
-			                            FREERDP_INPUT_MESSAGE_QUEUE);
+										FREERDP_INPUT_MESSAGE_QUEUE);
 
 			if (inputQueue)
 			{
@@ -637,53 +637,53 @@ BOOL csharp_freerdp_disconnect(void* instance)
 void csharp_freerdp_set_initial_buffer(void* instance, void* buffer)
 {
 	freerdp* inst = (freerdp*)instance;
-    csContext* ctxt = (csContext*)inst->context;
+	csContext* ctxt = (csContext*)inst->context;
 
 	ctxt->buffer = buffer;
 }
 
 void csharp_freerdp_set_on_region_updated(void* instance, fnRegionUpdated fn)
 {
-    freerdp* inst = (freerdp*)instance;
-    csContext* ctxt = (csContext*)inst->context;
+	freerdp* inst = (freerdp*)instance;
+	csContext* ctxt = (csContext*)inst->context;
 	
 	ctxt->regionUpdated = fn;
 }
 
 void csharp_freerdp_set_on_desktop_size_changed(void* instance, fnDesktopSizeChanged fn)
 {
-    freerdp* inst = (freerdp*)instance;
-    csContext* ctxt = (csContext*)inst->context;
+	freerdp* inst = (freerdp*)instance;
+	csContext* ctxt = (csContext*)inst->context;
 	
 	ctxt->desktopSizeChanged = fn;
 }
 
 BOOL csharp_freerdp_set_gateway_settings(void* instance, const char* hostname, UINT32 port, const char* username, const char* password, const char* domain, BOOL bypassLocal, BOOL httpTransport, BOOL rpcTransport)
 {
-    freerdp* inst = (freerdp*)instance;
-    rdpSettings* settings = inst->settings;
-    
-    settings->GatewayPort     = port;
-    settings->GatewayEnabled = TRUE;
-    settings->GatewayUseSameCredentials = FALSE;
-    settings->GatewayHostname = strdup(hostname);
-    settings->GatewayUsername = strdup(username);
-    settings->GatewayPassword = strdup(password);
-    settings->GatewayDomain = strdup(domain);
-    settings->GatewayBypassLocal = bypassLocal;
-    settings->GatewayHttpTransport = httpTransport;
-    settings->GatewayRpcTransport = rpcTransport;
-    settings->CredentialsFromStdin = FALSE;
+	freerdp* inst = (freerdp*)instance;
+	rdpSettings* settings = inst->settings;
+	
+	settings->GatewayPort     = port;
+	settings->GatewayEnabled = TRUE;
+	settings->GatewayUseSameCredentials = FALSE;
+	settings->GatewayHostname = strdup(hostname);
+	settings->GatewayUsername = strdup(username);
+	settings->GatewayPassword = strdup(password);
+	settings->GatewayDomain = strdup(domain);
+	settings->GatewayBypassLocal = bypassLocal;
+	settings->GatewayHttpTransport = httpTransport;
+	settings->GatewayRpcTransport = rpcTransport;
+	settings->CredentialsFromStdin = FALSE;
 
-    freerdp_update_gateway_usage_method(settings, TRUE, bypassLocal);
-    
-    if (!settings->GatewayHostname || !settings->GatewayUsername ||
-        !settings->GatewayPassword || !settings->GatewayDomain)
-    {
-        return FALSE;
-    }
-    
-    return TRUE;
+	freerdp_update_gateway_usage_method(settings, TRUE, bypassLocal);
+	
+	if (!settings->GatewayHostname || !settings->GatewayUsername ||
+		!settings->GatewayPassword || !settings->GatewayDomain)
+	{
+		return FALSE;
+	}
+	
+	return TRUE;
 }
 
 BOOL csharp_freerdp_set_client_hostname(void* instance, const char* clientHostname)
@@ -710,12 +710,12 @@ BOOL csharp_freerdp_set_console_mode(void* instance, BOOL useConsoleMode, BOOL u
 
 BOOL csharp_freerdp_set_redirect_clipboard(void* instance, BOOL redirectClipboard)
 {
-    freerdp* inst = (freerdp*)instance;
+	freerdp* inst = (freerdp*)instance;
 	rdpSettings * settings = inst->settings;
 
-    settings->RedirectClipboard = redirectClipboard;
+	settings->RedirectClipboard = redirectClipboard;
 
-    return TRUE;
+	return TRUE;
 }
 
 BOOL csharp_freerdp_set_redirect_audio(void* instance, int redirectSound, BOOL redirectCapture)
@@ -789,20 +789,20 @@ BOOL csharp_freerdp_set_connection_info(void* instance, const char* hostname, co
 		goto out_fail_strdup;
 
 	settings->SoftwareGdi = TRUE;
-    settings->AllowFontSmoothing = TRUE;
-    
-    if (codecLevel >= 7)
-    {
-        settings->RemoteFxCodec = TRUE;
-        settings->FastPathOutput = TRUE;
-        settings->LargePointerFlag = TRUE;
-        settings->FrameMarkerCommandEnabled = TRUE;
-        settings->ColorDepth = 32;
-    }
-    
-    if(codecLevel >= 8)
-    {
-        settings->SupportGraphicsPipeline = TRUE;
+	settings->AllowFontSmoothing = TRUE;
+	
+	if (codecLevel >= 7)
+	{
+		settings->RemoteFxCodec = TRUE;
+		settings->FastPathOutput = TRUE;
+		settings->LargePointerFlag = TRUE;
+		settings->FrameMarkerCommandEnabled = TRUE;
+		settings->ColorDepth = 32;
+	}
+	
+	if(codecLevel >= 8)
+	{
+		settings->SupportGraphicsPipeline = TRUE;
 	}
 
 	// set US keyboard layout
@@ -965,118 +965,118 @@ BOOL csharp_waitforsingleobject(void* instance)
 
 BOOL csharp_check_event_handles(void* instance, void* buffer)
 {
-    int result;
+	int result;
 	freerdp* inst = (freerdp*)instance;
 	csContext* ctxt = (csContext*)inst->context;
 
-    ctxt->buffer = buffer;
+	ctxt->buffer = buffer;
 	
 	result = freerdp_check_event_handles(inst->context);
-    
+	
 	return result;
 }
 
 void csharp_freerdp_send_unicode(void* instance, int character)
 {
-    cs_send_unicode_key((freerdp*)instance, character);
+	cs_send_unicode_key((freerdp*)instance, character);
 }
 
 void csharp_freerdp_send_vkcode(void* instance, int vkcode, BOOL down)
 {
-    cs_send_virtual_key((freerdp*)instance, vkcode, down);
+	cs_send_virtual_key((freerdp*)instance, vkcode, down);
 }
 
 void csharp_freerdp_send_input(void* instance, int character, BOOL down)
 {
-    BOOL shift_was_sent = FALSE;
-    
-    // Send as is.
-    if(character >= 256)
-    {
-        cs_send_virtual_key((freerdp*)instance, character, down);
-        return;
-    }
-    
-    int vk = cs_get_unicode(character);
-    if(vk != 0)
-    {
-        cs_send_unicode_key((freerdp*)instance, vk);
-    }
-    else
-    {
-        if(isupper(character))
-        {
-            character = tolower(character);
-            if(down)
-            {
-                cs_send_virtual_key((freerdp*)instance, VK_LSHIFT, TRUE);
-            }
-            shift_was_sent = TRUE;
-        }
-        
-        vk = cs_get_vk_code(character);
-        if(vk == 0)
-        {
-            // send as is
-            vk = character;
-        }
-        
-        // send key pressed
-        cs_send_virtual_key((freerdp*)instance, vk, down);
-        
-        if(shift_was_sent && !down)
-            cs_send_virtual_key((freerdp*)instance, VK_LSHIFT, FALSE);
-    }
+	BOOL shift_was_sent = FALSE;
+	
+	// Send as is.
+	if(character >= 256)
+	{
+		cs_send_virtual_key((freerdp*)instance, character, down);
+		return;
+	}
+	
+	int vk = cs_get_unicode(character);
+	if(vk != 0)
+	{
+		cs_send_unicode_key((freerdp*)instance, vk);
+	}
+	else
+	{
+		if(isupper(character))
+		{
+			character = tolower(character);
+			if(down)
+			{
+				cs_send_virtual_key((freerdp*)instance, VK_LSHIFT, TRUE);
+			}
+			shift_was_sent = TRUE;
+		}
+		
+		vk = cs_get_vk_code(character);
+		if(vk == 0)
+		{
+			// send as is
+			vk = character;
+		}
+		
+		// send key pressed
+		cs_send_virtual_key((freerdp*)instance, vk, down);
+		
+		if(shift_was_sent && !down)
+			cs_send_virtual_key((freerdp*)instance, VK_LSHIFT, FALSE);
+	}
 }
 
 void csharp_freerdp_send_cursor_event(void* instance, int x, int y, int flags)
 {
-    freerdp_input_send_mouse_event(((freerdp*)instance)->input, flags, x, y);
+	freerdp_input_send_mouse_event(((freerdp*)instance)->input, flags, x, y);
 }
 
 void csharp_freerdp_send_clipboard_data(void* instance, BYTE* buffer, int length)
 {
-    int size;
-    BYTE* data;
-    UINT32 formatId;
+	int size;
+	BYTE* data;
+	UINT32 formatId;
 
-    freerdp* inst = (freerdp*)instance;
-    csContext* ctxt = (csContext*)inst->context;
+	freerdp* inst = (freerdp*)instance;
+	csContext* ctxt = (csContext*)inst->context;
 
-    if(!ctxt->clipboard)
-    {
-        WLog_ERR(TAG, "Clipboard not initialized yet\n");
-        return; /* Clipboard not ready yet.*/
-    }
+	if(!ctxt->clipboard)
+	{
+		WLog_ERR(TAG, "Clipboard not initialized yet\n");
+		return; /* Clipboard not ready yet.*/
+	}
 
-    formatId = ClipboardRegisterFormat(ctxt->clipboard, "UTF8_STRING");
+	formatId = ClipboardRegisterFormat(ctxt->clipboard, "UTF8_STRING");
 
-    if (length)
-    {
-        size = length + 1;
-        data = (BYTE*) malloc(size);
+	if (length)
+	{
+		size = length + 1;
+		data = (BYTE*) malloc(size);
 
-        if (!data)
-            return;
+		if (!data)
+			return;
 
-        CopyMemory(data, buffer, size);
-        data[size] = '\0';
-        ClipboardSetData(ctxt->clipboard, formatId, (void*) data, size);
-    }
-    else
-    {
-        ClipboardEmpty(ctxt->clipboard);
-    }
+		CopyMemory(data, buffer, size);
+		data[size] = '\0';
+		ClipboardSetData(ctxt->clipboard, formatId, (void*) data, size);
+	}
+	else
+	{
+		ClipboardEmpty(ctxt->clipboard);
+	}
 
-    cs_cliprdr_send_client_format_list(ctxt->cliprdr);
+	cs_cliprdr_send_client_format_list(ctxt->cliprdr);
 }
 
 void csharp_set_log_output(const char* path, const char* name)
 {
-    SetEnvironmentVariableA("WLOG_APPENDER", "FILE");
-    SetEnvironmentVariableA("WLOG_LEVEL", "DEBUG");
-    SetEnvironmentVariableA("WLOG_FILEAPPENDER_OUTPUT_FILE_PATH", path);
-    SetEnvironmentVariableA("WLOG_FILEAPPENDER_OUTPUT_FILE_NAME", name);
+	SetEnvironmentVariableA("WLOG_APPENDER", "FILE");
+	SetEnvironmentVariableA("WLOG_LEVEL", "DEBUG");
+	SetEnvironmentVariableA("WLOG_FILEAPPENDER_OUTPUT_FILE_PATH", path);
+	SetEnvironmentVariableA("WLOG_FILEAPPENDER_OUTPUT_FILE_NAME", name);
 }
 
 void csharp_set_on_authenticate(void* instance, pAuthenticate fn)
@@ -1089,9 +1089,9 @@ void csharp_set_on_authenticate(void* instance, pAuthenticate fn)
 void csharp_set_on_clipboard_update(void* instance, fnOnClipboardUpdate fn)
 {
 	freerdp* inst = (freerdp*)instance;
-    csContext* ctxt = (csContext*)inst->context;
-    
-    ctxt->onClipboardUpdate = fn;
+	csContext* ctxt = (csContext*)inst->context;
+	
+	ctxt->onClipboardUpdate = fn;
 }
 
 void csharp_set_on_gateway_authenticate(void* instance, pAuthenticate fn)
@@ -1117,10 +1117,10 @@ void csharp_set_on_verify_x509_certificate(void* instance, pVerifyX509Certificat
 
 void csharp_set_on_error(void* instance, fnOnError fn)
 {
-    freerdp* inst = (freerdp*)instance;
-    csContext* ctxt = (csContext*)inst->context;
-    
-    ctxt->onError = fn;
+	freerdp* inst = (freerdp*)instance;
+	csContext* ctxt = (csContext*)inst->context;
+	
+	ctxt->onError = fn;
 }
 
 void csharp_set_on_cursor_notifications(void* instance, fnOnNewCursor newCursor, fnOnFreeCursor freeCursor, fnOnSetCursor setCursor, fnOnDefaultCursor defaultCursor)
@@ -1136,7 +1136,7 @@ void csharp_set_on_cursor_notifications(void* instance, fnOnNewCursor newCursor,
 
 const char* csharp_get_error_info_string(int code)
 {
-    return freerdp_get_error_info_string(code);
+	return freerdp_get_error_info_string(code);
 }
 
 int csharp_get_last_error(void* instance)
