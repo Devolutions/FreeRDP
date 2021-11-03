@@ -1060,8 +1060,9 @@ void csharp_freerdp_send_clipboard_data(void* instance, BYTE* buffer, int length
 			return;
 
 		CopyMemory(data, buffer, size);
-		data[size] = '\0';
+		data[size - 1] = '\0';
 		ClipboardSetData(ctxt->clipboard, formatId, (void*) data, size);
+		free(data);
 	}
 	else
 	{
