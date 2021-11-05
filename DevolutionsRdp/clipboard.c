@@ -100,7 +100,7 @@ int cs_cliprdr_send_client_capabilities(CliprdrClientContext* cliprdr)
  *
  * @return 0 on success, otherwise a Win32 error code
  */
-UINT cs_cliprdr_monitor_ready(CliprdrClientContext* cliprdr, CLIPRDR_MONITOR_READY* monitorReady)
+UINT cs_cliprdr_monitor_ready(CliprdrClientContext* cliprdr, const CLIPRDR_MONITOR_READY* monitorReady)
 {
 	csContext* ctx = (csContext*) cliprdr->custom;
 
@@ -116,7 +116,7 @@ UINT cs_cliprdr_monitor_ready(CliprdrClientContext* cliprdr, CLIPRDR_MONITOR_REA
  *
  * @return 0 on success, otherwise a Win32 error code
  */
-UINT cs_cliprdr_server_capabilities(CliprdrClientContext* cliprdr, CLIPRDR_CAPABILITIES* capabilities)
+UINT cs_cliprdr_server_capabilities(CliprdrClientContext* cliprdr, const CLIPRDR_CAPABILITIES* capabilities)
 {
 	UINT32 index;
 	CLIPRDR_CAPABILITY_SET* capabilitySet;
@@ -145,7 +145,7 @@ UINT cs_cliprdr_server_capabilities(CliprdrClientContext* cliprdr, CLIPRDR_CAPAB
  *
  * @return 0 on success, otherwise a Win32 error code
  */
-UINT cs_cliprdr_server_format_list(CliprdrClientContext* cliprdr, CLIPRDR_FORMAT_LIST* formatList)
+UINT cs_cliprdr_server_format_list(CliprdrClientContext* cliprdr, const CLIPRDR_FORMAT_LIST* formatList)
 {
 	UINT32 index;
 	CLIPRDR_FORMAT* format;
@@ -205,7 +205,7 @@ UINT cs_cliprdr_server_format_list(CliprdrClientContext* cliprdr, CLIPRDR_FORMAT
  *
  * @return 0 on success, otherwise a Win32 error code
  */
-UINT cs_cliprdr_server_format_list_response(CliprdrClientContext* cliprdr, CLIPRDR_FORMAT_LIST_RESPONSE* formatListResponse)
+UINT cs_cliprdr_server_format_list_response(CliprdrClientContext* cliprdr, const CLIPRDR_FORMAT_LIST_RESPONSE* formatListResponse)
 {
 	return CHANNEL_RC_OK;
 }
@@ -215,7 +215,7 @@ UINT cs_cliprdr_server_format_list_response(CliprdrClientContext* cliprdr, CLIPR
  *
  * @return 0 on success, otherwise a Win32 error code
  */
-UINT cs_cliprdr_server_lock_clipboard_data(CliprdrClientContext* cliprdr, CLIPRDR_LOCK_CLIPBOARD_DATA* lockClipboardData)
+UINT cs_cliprdr_server_lock_clipboard_data(CliprdrClientContext* cliprdr, const CLIPRDR_LOCK_CLIPBOARD_DATA* lockClipboardData)
 {
 	return CHANNEL_RC_OK;
 }
@@ -225,7 +225,7 @@ UINT cs_cliprdr_server_lock_clipboard_data(CliprdrClientContext* cliprdr, CLIPRD
  *
  * @return 0 on success, otherwise a Win32 error code
  */
-UINT cs_cliprdr_server_unlock_clipboard_data(CliprdrClientContext* cliprdr, CLIPRDR_UNLOCK_CLIPBOARD_DATA* unlockClipboardData)
+UINT cs_cliprdr_server_unlock_clipboard_data(CliprdrClientContext* cliprdr, const CLIPRDR_UNLOCK_CLIPBOARD_DATA* unlockClipboardData)
 {
 	return CHANNEL_RC_OK;
 }
@@ -235,7 +235,7 @@ UINT cs_cliprdr_server_unlock_clipboard_data(CliprdrClientContext* cliprdr, CLIP
  *
  * @return 0 on success, otherwise a Win32 error code
  */
-UINT cs_cliprdr_server_format_data_request(CliprdrClientContext* cliprdr, CLIPRDR_FORMAT_DATA_REQUEST* formatDataRequest)
+UINT cs_cliprdr_server_format_data_request(CliprdrClientContext* cliprdr, const CLIPRDR_FORMAT_DATA_REQUEST* formatDataRequest)
 {
 	BYTE* data;
 	UINT32 size;
@@ -271,7 +271,7 @@ UINT cs_cliprdr_server_format_data_request(CliprdrClientContext* cliprdr, CLIPRD
  *
  * @return 0 on success, otherwise a Win32 error code
  */
-UINT cs_cliprdr_server_format_data_response(CliprdrClientContext* cliprdr, CLIPRDR_FORMAT_DATA_RESPONSE* formatDataResponse)
+UINT cs_cliprdr_server_format_data_response(CliprdrClientContext* cliprdr, const CLIPRDR_FORMAT_DATA_RESPONSE* formatDataResponse)
 {
 	BYTE* data;
 	UINT32 size;
@@ -320,7 +320,7 @@ UINT cs_cliprdr_server_format_data_response(CliprdrClientContext* cliprdr, CLIPR
  *
  * @return 0 on success, otherwise a Win32 error code
  */
-UINT cs_cliprdr_server_file_contents_request(CliprdrClientContext* cliprdr, CLIPRDR_FILE_CONTENTS_REQUEST* fileContentsRequest)
+UINT cs_cliprdr_server_file_contents_request(CliprdrClientContext* cliprdr, const CLIPRDR_FILE_CONTENTS_REQUEST* fileContentsRequest)
 {
 	return CHANNEL_RC_OK;
 }
@@ -330,7 +330,7 @@ UINT cs_cliprdr_server_file_contents_request(CliprdrClientContext* cliprdr, CLIP
  *
  * @return 0 on success, otherwise a Win32 error code
  */
-UINT cs_cliprdr_server_file_contents_response(CliprdrClientContext* cliprdr, CLIPRDR_FILE_CONTENTS_RESPONSE* fileContentsResponse)
+UINT cs_cliprdr_server_file_contents_response(CliprdrClientContext* cliprdr, const CLIPRDR_FILE_CONTENTS_RESPONSE* fileContentsResponse)
 {
 	return CHANNEL_RC_OK;
 }
