@@ -19,7 +19,7 @@ typedef void (*fnOnDefaultCursor)(void* context);
 typedef struct csharp_context
 {
 	rdpContext _p;
-    
+
 	void* buffer;
 	HANDLE inputThread;
 	
@@ -33,7 +33,7 @@ typedef struct csharp_context
 	fnOnError onError;
 
 	fnOnChannelReceivedData onChannelReceivedData;
-	
+
 	BOOL clipboardSync;
 	wClipboard* clipboard;
 	UINT32 numServerFormats;
@@ -47,7 +47,7 @@ typedef struct csharp_context
 	UINT32 clipboardCapabilities;
 } csContext;
 
-FREERDP_API void* csharp_freerdp_new();
+FREERDP_API void* csharp_freerdp_new(void);
 FREERDP_API void csharp_freerdp_free(void* instance);
 FREERDP_API BOOL csharp_freerdp_connect(void* instance);
 FREERDP_API BOOL csharp_freerdp_disconnect(void* instance);
@@ -90,7 +90,8 @@ FREERDP_API void csharp_freerdp_set_hyperv_info(void* instance, char* pcb);
 FREERDP_API void csharp_freerdp_set_keyboard_layout(void* instance, int layoutID);
 FREERDP_API void csharp_freerdp_set_smart_sizing(void* instance, bool smartSizing);
 FREERDP_API void csharp_freerdp_sync_toggle_keys(void* instance);
-
+FREERDP_API BOOL csharp_freerdp_input_send_focus_in_event(void* instance, uint16_t toggleStates);
+FREERDP_API BOOL csharp_freerdp_input_send_synchronize_event(void* instance, uint32_t flags);
 FREERDP_API void csharp_set_on_authenticate(void* instance, pAuthenticate fn);
 FREERDP_API void csharp_set_on_clipboard_update(void* instance, fnOnClipboardUpdate fn);
 FREERDP_API void csharp_set_on_gateway_authenticate(void* instance, pAuthenticate fn);
