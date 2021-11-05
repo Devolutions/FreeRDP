@@ -47,7 +47,7 @@ typedef struct csharp_context
 	UINT32 clipboardCapabilities;
 } csContext;
 
-FREERDP_API void* csharp_freerdp_new();
+FREERDP_API void* csharp_freerdp_new(void);
 FREERDP_API void csharp_freerdp_free(void* instance);
 FREERDP_API BOOL csharp_freerdp_connect(void* instance);
 FREERDP_API BOOL csharp_freerdp_disconnect(void* instance);
