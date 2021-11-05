@@ -19,8 +19,6 @@
 
 #define TAG "DevolutionsRdp"
 
-// PRIVATE FUNCTIONS DECLARATIONS
-/////////////////////////////////
 static BOOL cs_pre_connect(freerdp* instance);
 static BOOL cs_post_connect(freerdp* instance);
 static void cs_post_disconnect(freerdp* instance);
@@ -31,16 +29,6 @@ static char** freerdp_command_line_parse_comma_separated_values_offset(const cha
 static char** freerdp_command_line_parse_comma_separated_values_ex(const char* name, const char* list, size_t* count);
 void cs_error_info(void* ctx, ErrorInfoEventArgs* e);
 BOOL cs_client_global_init();
-/////////////////////////////////
-//
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////
-//// CALLBACKS
-////
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static int cs_get_vk_code(int character)
 {
@@ -293,8 +281,6 @@ static BOOL cs_pre_connect(freerdp* instance)
 	PubSub_SubscribeChannelDisconnected(context->pubSub,
 										(pChannelDisconnectedEventHandler) cs_OnChannelDisconnectedEventHandler);
 
-	
-
 	if (!context->cache)
 	{
 		if (!(context->cache = cache_new(settings)))
@@ -355,12 +341,15 @@ BOOL cs_desktop_resize(rdpContext* context)
 		return FALSE;
 
 	csc->buffer = csc->desktopSizeChanged(context->instance, settings->DesktopWidth, settings->DesktopHeight);
+
 	if(!csc->buffer)
 		return FALSE;
 
 	if (!gdi_resize_ex(gdi, settings->DesktopWidth, settings->DesktopHeight,
 					stride, PIXEL_FORMAT_BGRX32, csc->buffer, NULL))
+	{
 		return FALSE;
+	}
 
 	return TRUE;
 }
@@ -493,8 +482,7 @@ static char** freerdp_command_line_parse_comma_separated_values_offset(
 }
 
 static char** freerdp_command_line_parse_comma_separated_values_ex(const char* name,
-		const char* list,
-		size_t* count)
+		const char* list, size_t* count)
 {
 	char** p;
 	char* str;
@@ -782,6 +770,7 @@ BOOL csharp_freerdp_set_connection_info(void* instance, const char* hostname, co
 	{
 		if (!(settings->Password = strdup(password)))
 			goto out_fail_strdup;
+
 		settings->AutoLogonEnabled = TRUE;
 	}
 
@@ -810,7 +799,7 @@ BOOL csharp_freerdp_set_connection_info(void* instance, const char* hostname, co
 
 	return TRUE;
 
-	out_fail_strdup:
+out_fail_strdup:
 	return FALSE;
 }
 
@@ -905,9 +894,9 @@ BOOL csharp_freerdp_set_data_directory(void* instance, const char* directory)
 
 	return TRUE;
 
-	out_strdup_fail:
+out_strdup_fail:
 	free(config_dir_buf);
-	out_malloc_fail:
+out_malloc_fail:
 	return FALSE;
 }
 
@@ -998,6 +987,7 @@ void csharp_freerdp_send_input(void* instance, int character, BOOL down)
 	}
 	
 	int vk = cs_get_unicode(character);
+
 	if(vk != 0)
 	{
 		cs_send_unicode_key((freerdp*)instance, vk);
@@ -1007,14 +997,15 @@ void csharp_freerdp_send_input(void* instance, int character, BOOL down)
 		if(isupper(character))
 		{
 			character = tolower(character);
+
 			if(down)
-			{
 				cs_send_virtual_key((freerdp*)instance, VK_LSHIFT, TRUE);
-			}
+
 			shift_was_sent = TRUE;
 		}
 		
 		vk = cs_get_vk_code(character);
+
 		if(vk == 0)
 		{
 			// send as is
@@ -1242,10 +1233,12 @@ FREERDP_API void csharp_freerdp_create_virtual_channels(void* instance, const ch
 	rdpSettings * settings = ((freerdp*)instance)->settings;
 
  	r = strdup(channelNames);
+
 	if(!r)
 		return;
 
 	token = end = r;
+
 	while(token != NULL)
 	{
 		StrSep(&end, ",");
