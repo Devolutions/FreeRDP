@@ -82,10 +82,10 @@ BOOL cs_Pointer_SetDefault(rdpContext* context)
 
 BOOL cs_Pointer_SetPosition(rdpContext* context, UINT32 x, UINT32 y)
 {
-       if (!context)
-               return FALSE;
-       
-       return TRUE;
+	if (!context)
+		return FALSE;
+	
+	return TRUE;
 }
 
 void cs_register_pointer(rdpContext* context)
