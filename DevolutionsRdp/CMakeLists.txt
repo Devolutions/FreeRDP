@@ -92,7 +92,7 @@ if(APPLE)
 	endif()
 
 	if(NOT IOS)
-	    find_library(AUDIO_UNIT AudioUnit)
+		find_library(AUDIO_UNIT AudioUnit)
 		target_link_libraries(${MODULE_NAME} "${AUDIO_UNIT}")
 	endif()
 endif()
