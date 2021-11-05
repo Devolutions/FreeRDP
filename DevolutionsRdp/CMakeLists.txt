@@ -79,6 +79,11 @@ if(APPLE)
 		find_library(FOUNDATION Foundation)
 		target_link_libraries(${MODULE_NAME} "${FOUNDATION}")
 	endif()
+
+	if(NOT IOS)
+		find_library(AUDIO_UNIT AudioUnit)
+		target_link_libraries(${MODULE_NAME} "${AUDIO_UNIT}")
+	endif()
 endif()
 
 set_target_properties(${MODULE_NAME} PROPERTIES PREFIX "")
