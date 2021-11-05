@@ -16,6 +16,7 @@ void* csharp_create_shared_buffer(char* name, int size)
 	HANDLE hMapFile;
 
 	hMapFile = CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, 0, size, name);
+	
 	if (!hMapFile)
 		return NULL;
 

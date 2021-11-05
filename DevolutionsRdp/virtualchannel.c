@@ -4,61 +4,61 @@
 #define TAG CHANNELS_TAG("virtual.channel")
 
 static UINT virtchan_virtual_channel_event_data_received(virtchanPlugin* virtchan,
-    void* pData, UINT32 dataLength, UINT32 totalLength, UINT32 dataFlags)
+	void* pData, UINT32 dataLength, UINT32 totalLength, UINT32 dataFlags)
 {
-    wStream* data_in;
+	wStream* data_in;
 
-    if ((dataFlags & CHANNEL_FLAG_SUSPEND) || (dataFlags & CHANNEL_FLAG_RESUME))
-        return CHANNEL_RC_OK;
+	if ((dataFlags & CHANNEL_FLAG_SUSPEND) || (dataFlags & CHANNEL_FLAG_RESUME))
+		return CHANNEL_RC_OK;
 
-    if (dataFlags & CHANNEL_FLAG_FIRST)
-    {
-        if (virtchan->data_in)
-            Stream_Free(virtchan->data_in, TRUE);
+	if (dataFlags & CHANNEL_FLAG_FIRST)
+	{
+		if (virtchan->data_in)
+			Stream_Free(virtchan->data_in, TRUE);
 
-        virtchan->data_in = Stream_New(NULL, totalLength);
+		virtchan->data_in = Stream_New(NULL, totalLength);
 
-        if (!virtchan->data_in)
-        {
-            WLog_ERR(TAG, "Stream_New failed!");
-            return CHANNEL_RC_NO_MEMORY;
-        }
-    }
+		if (!virtchan->data_in)
+		{
+			WLog_ERR(TAG, "Stream_New failed!");
+			return CHANNEL_RC_NO_MEMORY;
+		}
+	}
 
-    data_in = virtchan->data_in;
+	data_in = virtchan->data_in;
 
-    if (!Stream_EnsureRemainingCapacity(data_in, (int)dataLength))
-    {
-        WLog_ERR(TAG, "Stream_EnsureRemainingCapacity failed!");
-        return ERROR_INTERNAL_ERROR;
-    }
+	if (!Stream_EnsureRemainingCapacity(data_in, (int)dataLength))
+	{
+		WLog_ERR(TAG, "Stream_EnsureRemainingCapacity failed!");
+		return ERROR_INTERNAL_ERROR;
+	}
 
-    Stream_Write(data_in, pData, dataLength);
+	Stream_Write(data_in, pData, dataLength);
 
-    if (dataFlags & CHANNEL_FLAG_LAST)
-    {
-        if (Stream_Capacity(data_in) != Stream_GetPosition(data_in))
-        {
-            WLog_ERR(TAG, "virtchan_plugin_process_received: read error");
-            return ERROR_INVALID_DATA;
-        }
+	if (dataFlags & CHANNEL_FLAG_LAST)
+	{
+		if (Stream_Capacity(data_in) != Stream_GetPosition(data_in))
+		{
+			WLog_ERR(TAG, "virtchan_plugin_process_received: read error");
+			return ERROR_INVALID_DATA;
+		}
 
-        virtchan->data_in = NULL;
-        Stream_SealLength(data_in);
-        Stream_SetPosition(data_in, 0);
+		virtchan->data_in = NULL;
+		Stream_SealLength(data_in);
+		Stream_SetPosition(data_in, 0);
 
 		if(virtchan->onChannelReceivedData)
 		{
 			virtchan->onChannelReceivedData(virtchan->context->custom, virtchan->channelDef.name, data_in->buffer, data_in->length);
 		}
-    }
+	}
 
-    return CHANNEL_RC_OK;
+	return CHANNEL_RC_OK;
 }
 
 static VOID VCAPITYPE virtchan_virtual_channel_open_event_ex(LPVOID lpUserParam, DWORD openHandle,
-        UINT event,
-        LPVOID pData, UINT32 dataLength, UINT32 totalLength, UINT32 dataFlags)
+		UINT event,
+		LPVOID pData, UINT32 dataLength, UINT32 totalLength, UINT32 dataFlags)
 {
 	UINT error = CHANNEL_RC_OK;
 	virtchanPlugin* virtchan = (virtchanPlugin*) lpUserParam;
@@ -73,8 +73,10 @@ static VOID VCAPITYPE virtchan_virtual_channel_open_event_ex(LPVOID lpUserParam,
 	 {
 	 	case CHANNEL_EVENT_DATA_RECEIVED:
 	 		if ((error = virtchan_virtual_channel_event_data_received(virtchan, pData,
-	 		             dataLength, totalLength, dataFlags)))
+	 					 dataLength, totalLength, dataFlags)))
+			{
 	 			WLog_ERR(TAG, "virtchan_virtual_channel_event_data_received failed with error %"PRIu32"", error);
+			}
 
 	 		break;
 
@@ -92,17 +94,17 @@ static VOID VCAPITYPE virtchan_virtual_channel_open_event_ex(LPVOID lpUserParam,
 }
 
 static UINT virtchan_virtual_channel_event_connected(virtchanPlugin* virtchan,
-        LPVOID pData, UINT32 dataLength)
+		LPVOID pData, UINT32 dataLength)
 {
 	UINT32 status;
 	status = virtchan->channelEntryPoints.pVirtualChannelOpenEx(virtchan->InitHandle,
-	         &virtchan->OpenHandle, virtchan->channelDef.name,
-	         virtchan_virtual_channel_open_event_ex);
+			 &virtchan->OpenHandle, virtchan->channelDef.name,
+			 virtchan_virtual_channel_open_event_ex);
 
 	if (status != CHANNEL_RC_OK)
 	{
 		WLog_ERR(TAG, "pVirtualChannelOpen failed with %s [%08"PRIX32"]",
-		         WTSErrorToString(status), status);
+				 WTSErrorToString(status), status);
 		return status;
 	}
 
@@ -126,7 +128,8 @@ static UINT virtchan_virtual_channel_event_disconnected(virtchanPlugin* virtchan
 	if (CHANNEL_RC_OK != rc)
 	{
 		WLog_ERR(TAG, "pVirtualChannelClose failed with %s [%08"PRIX32"]",
-		         WTSErrorToString(rc), rc);
+				 WTSErrorToString(rc), rc);
+
 		return rc;
 	}
 
@@ -140,7 +143,6 @@ static UINT virtchan_virtual_channel_event_disconnected(virtchanPlugin* virtchan
 
 	return CHANNEL_RC_OK;
 }
-
 
 /**
  * Function description
@@ -156,7 +158,7 @@ static UINT virtchan_virtual_channel_event_terminated(virtchanPlugin* virtchan)
 }
 
 static VOID VCAPITYPE virtchan_virtual_channel_init_event_ex(LPVOID lpUserParam, LPVOID pInitHandle,
-        UINT event, LPVOID pData, UINT dataLength)
+		UINT event, LPVOID pData, UINT dataLength)
 {
 	UINT error = CHANNEL_RC_OK;
 	virtchanPlugin* virtchan = (virtchanPlugin*) lpUserParam;
@@ -171,16 +173,20 @@ static VOID VCAPITYPE virtchan_virtual_channel_init_event_ex(LPVOID lpUserParam,
 	{
 		case CHANNEL_EVENT_CONNECTED:
 			if ((error = virtchan_virtual_channel_event_connected(virtchan, pData,
-			             dataLength)))
+						 dataLength)))
+			{
 				WLog_ERR(TAG, "virtchan_virtual_channel_event_connected failed with error %"PRIu32"",
-				         error);
+						 error);
+			}
 
 			break;
 
 		case CHANNEL_EVENT_DISCONNECTED:
 			if ((error = virtchan_virtual_channel_event_disconnected(virtchan)))
+			{
 				WLog_ERR(TAG,
-				         "virtchan_virtual_channel_event_disconnected failed with error %"PRIu32"", error);
+						 "virtchan_virtual_channel_event_disconnected failed with error %"PRIu32"", error);
+			}
 
 			break;
 
@@ -190,6 +196,7 @@ static VOID VCAPITYPE virtchan_virtual_channel_init_event_ex(LPVOID lpUserParam,
 
 		default:
 			WLog_ERR(TAG, "Unhandled event type %"PRIu32"", event);
+			break;
 	}
 
 	if (error && virtchan->rdpcontext)
@@ -198,7 +205,7 @@ static VOID VCAPITYPE virtchan_virtual_channel_init_event_ex(LPVOID lpUserParam,
 
 BOOL VCAPITYPE rdpvirt_VirtualChannelEntryEx(PCHANNEL_ENTRY_POINTS pEntryPoints, PVOID pInitHandle, LPCSTR pszName)
 {
-    UINT rc;
+	UINT rc;
 	virtchanPlugin* virtchan;
 	VirtChanContext* context = NULL;
 	CHANNEL_ENTRY_POINTS_FREERDP_EX* pEntryPointsEx;
@@ -212,14 +219,15 @@ BOOL VCAPITYPE rdpvirt_VirtualChannelEntryEx(PCHANNEL_ENTRY_POINTS pEntryPoints,
 	}
 
 	virtchan->channelDef.options =
-	    CHANNEL_OPTION_INITIALIZED |
-	    CHANNEL_OPTION_ENCRYPT_RDP |
-	    CHANNEL_OPTION_COMPRESS_RDP;
+		CHANNEL_OPTION_INITIALIZED |
+		CHANNEL_OPTION_ENCRYPT_RDP |
+		CHANNEL_OPTION_COMPRESS_RDP;
+
 	sprintf_s(virtchan->channelDef.name, ARRAYSIZE(virtchan->channelDef.name), "%s", pszName);
 	pEntryPointsEx = (CHANNEL_ENTRY_POINTS_FREERDP_EX*) pEntryPoints;
 
 	if ((pEntryPointsEx->cbSize >= sizeof(CHANNEL_ENTRY_POINTS_FREERDP_EX)) &&
-	    (pEntryPointsEx->MagicNumber == FREERDP_CHANNEL_MAGIC_NUMBER))
+		(pEntryPointsEx->MagicNumber == FREERDP_CHANNEL_MAGIC_NUMBER))
 	{
 		context = (VirtChanContext*) calloc(1, sizeof(VirtChanContext));
 
@@ -236,21 +244,22 @@ BOOL VCAPITYPE rdpvirt_VirtualChannelEntryEx(PCHANNEL_ENTRY_POINTS pEntryPoints,
 	}
 
 	CopyMemory(&(virtchan->channelEntryPoints), pEntryPoints,
-	           sizeof(CHANNEL_ENTRY_POINTS_FREERDP_EX));
+			   sizeof(CHANNEL_ENTRY_POINTS_FREERDP_EX));
+
 	virtchan->InitHandle = pInitHandle;
 	rc = virtchan->channelEntryPoints.pVirtualChannelInitEx(virtchan, context, pInitHandle,
-	        &virtchan->channelDef, 1, VIRTUAL_CHANNEL_VERSION_WIN2000,
-	        virtchan_virtual_channel_init_event_ex);
+			&virtchan->channelDef, 1, VIRTUAL_CHANNEL_VERSION_WIN2000,
+			virtchan_virtual_channel_init_event_ex);
 
 	if (CHANNEL_RC_OK != rc)
 	{
-		WLog_ERR(TAG, "failed with %s [%08"PRIX32"]",
-		         WTSErrorToString(rc), rc);
+		WLog_ERR(TAG, "failed with %s [%08"PRIX32"]", WTSErrorToString(rc), rc);
 		goto error_out;
 	}
 
 	virtchan->channelEntryPoints.pInterface = context;
 	return TRUE;
+
 error_out:
 
 	if (isFreerdp)
@@ -277,11 +286,12 @@ BOOL VCAPITYPE rdpvirt_log_VirtualChannelEntryEx(PCHANNEL_ENTRY_POINTS pEntryPoi
 
 PVIRTUALCHANNELENTRY cs_channels_load_static_addin_entry(LPCSTR pszName, LPSTR pszSubsystem, LPSTR pszType, DWORD dwFlags)
 {
-    PVIRTUALCHANNELENTRY entry = NULL;
+	PVIRTUALCHANNELENTRY entry = NULL;
 
 	entry = freerdp_channels_load_static_addin_entry(pszName, pszSubsystem, pszType, dwFlags);
-    if(entry)
-        return entry;
+
+	if(entry)
+		return entry;
 
 	if (strcmp(pszName, "RDMJump") == 0)
 	{
@@ -317,12 +327,14 @@ UINT cs_channel_write(VirtChanContext* context, BSTR message, int size)
 	Stream_SealLength(s);
 
 	status = virtchan->channelEntryPoints.pVirtualChannelWriteEx(virtchan->InitHandle,
-	         virtchan->OpenHandle,
-	         Stream_Buffer(s), (UINT32) Stream_Length(s), s);
+			 virtchan->OpenHandle,
+			 Stream_Buffer(s), (UINT32) Stream_Length(s), s);
 
 	if (status != CHANNEL_RC_OK)
+	{
 		WLog_ERR(TAG,  "VirtualChannelWriteEx failed with %s [%08"PRIX32"]",
-		         WTSErrorToString(status), status);
+				 WTSErrorToString(status), status);
+	}
 
 	return status;
 }
