@@ -19,28 +19,16 @@
 
 #define TAG "DevolutionsRdp"
 
-// PRIVATE FUNCTIONS DECLARATIONS
-/////////////////////////////////
 static BOOL cs_pre_connect(freerdp* instance);
 static BOOL cs_post_connect(freerdp* instance);
 static void cs_post_disconnect(freerdp* instance);
 static BOOL cs_authenticate(freerdp* instance, char** username, char** password, char** domain);
-static BOOL cs_verify_certificate(freerdp* instance, char* subject, char* issuer, char* fingerprint);
-static int cs_verify_x509_certificate(freerdp* instance, BYTE* data, int length, const char* hostname, int port, DWORD flags);
+static DWORD cs_verify_certificate(freerdp* instance, const char* common_name, const char* subject, const char* issuer, const char* fingerprint, BOOL host_mismatch);
+static int cs_verify_x509_certificate(freerdp* instance, const BYTE* data, size_t length, const char* hostname, uint16_t port, DWORD flags);
 static char** freerdp_command_line_parse_comma_separated_values_offset(const char* name, char* list, size_t* count);
 static char** freerdp_command_line_parse_comma_separated_values_ex(const char* name, const char* list, size_t* count);
 void cs_error_info(void* ctx, ErrorInfoEventArgs* e);
 BOOL cs_client_global_init();
-/////////////////////////////////
-//
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////
-//// CALLBACKS
-////
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static int cs_get_vk_code(int character)
 {
@@ -293,8 +281,6 @@ static BOOL cs_pre_connect(freerdp* instance)
 	PubSub_SubscribeChannelDisconnected(context->pubSub,
 										(pChannelDisconnectedEventHandler) cs_OnChannelDisconnectedEventHandler);
 
-	
-
 	if (!context->cache)
 	{
 		if (!(context->cache = cache_new(settings)))
@@ -355,12 +341,15 @@ BOOL cs_desktop_resize(rdpContext* context)
 		return FALSE;
 
 	csc->buffer = csc->desktopSizeChanged(context->instance, settings->DesktopWidth, settings->DesktopHeight);
+
 	if(!csc->buffer)
 		return FALSE;
 
 	if (!gdi_resize_ex(gdi, settings->DesktopWidth, settings->DesktopHeight,
 					stride, PIXEL_FORMAT_BGRX32, csc->buffer, NULL))
+	{
 		return FALSE;
+	}
 
 	return TRUE;
 }
@@ -433,12 +422,12 @@ static BOOL cs_authenticate(freerdp* instance, char** username, char** password,
 	return TRUE;
 }
 
-static BOOL cs_verify_certificate(freerdp* instance, char* subject, char* issuer, char* fingerprint)
+static DWORD cs_verify_certificate(freerdp* instance, const char* common_name, const char* subject, const char* issuer, const char* fingerprint, BOOL host_mismatch)
 {
 	return TRUE;
 }
 
-static int cs_verify_x509_certificate(freerdp* instance, BYTE* data, int length, const char* hostname, int port, DWORD flags)
+static int cs_verify_x509_certificate(freerdp* instance, const BYTE* data, size_t length, const char* hostname, uint16_t port, DWORD flags)
 {
 	return 1;
 }
@@ -493,8 +482,7 @@ static char** freerdp_command_line_parse_comma_separated_values_offset(
 }
 
 static char** freerdp_command_line_parse_comma_separated_values_ex(const char* name,
-		const char* list,
-		size_t* count)
+		const char* list, size_t* count)
 {
 	char** p;
 	char* str;
@@ -700,7 +688,7 @@ BOOL csharp_freerdp_set_client_hostname(void* instance, const char* clientHostna
 BOOL csharp_freerdp_set_console_mode(void* instance, BOOL useConsoleMode, BOOL useRestrictedAdminMode)
 {
 	freerdp* inst = (freerdp*)instance;
-	rdpSettings * settings = inst->settings;
+	rdpSettings* settings = inst->settings;
 
 	settings->ConsoleSession = useConsoleMode;
 	settings->RestrictedAdminModeRequired = useRestrictedAdminMode;
@@ -711,7 +699,7 @@ BOOL csharp_freerdp_set_console_mode(void* instance, BOOL useConsoleMode, BOOL u
 BOOL csharp_freerdp_set_redirect_clipboard(void* instance, BOOL redirectClipboard)
 {
 	freerdp* inst = (freerdp*)instance;
-	rdpSettings * settings = inst->settings;
+	rdpSettings* settings = inst->settings;
 
 	settings->RedirectClipboard = redirectClipboard;
 
@@ -721,7 +709,7 @@ BOOL csharp_freerdp_set_redirect_clipboard(void* instance, BOOL redirectClipboar
 BOOL csharp_freerdp_set_redirect_audio(void* instance, int redirectSound, BOOL redirectCapture)
 {
 	freerdp* inst = (freerdp*)instance;
-	rdpSettings * settings = inst->settings;
+	rdpSettings* settings = inst->settings;
 
 	char** p;
 	size_t count;
@@ -756,7 +744,7 @@ BOOL csharp_freerdp_set_redirect_audio(void* instance, int redirectSound, BOOL r
 BOOL csharp_freerdp_set_connection_info(void* instance, const char* hostname, const char* username, const char* password, const char* domain, UINT32 width, UINT32 height, UINT32 color_depth, UINT32 port, int codecLevel)
 {
 	freerdp* inst = (freerdp*)instance;
-	rdpSettings * settings = inst->settings;
+	rdpSettings* settings = inst->settings;
 
 	settings->DesktopWidth = width;
 	settings->DesktopHeight = height;
@@ -782,6 +770,7 @@ BOOL csharp_freerdp_set_connection_info(void* instance, const char* hostname, co
 	{
 		if (!(settings->Password = strdup(password)))
 			goto out_fail_strdup;
+
 		settings->AutoLogonEnabled = TRUE;
 	}
 
@@ -810,14 +799,14 @@ BOOL csharp_freerdp_set_connection_info(void* instance, const char* hostname, co
 
 	return TRUE;
 
-	out_fail_strdup:
+out_fail_strdup:
 	return FALSE;
 }
 
 BOOL csharp_freerdp_set_security_info(void* instance, BOOL useTLS, BOOL useNLA)
 {
 	freerdp* inst = (freerdp*)instance;
-	rdpSettings * settings = inst->settings;
+	rdpSettings* settings = inst->settings;
 
 	settings->RdpSecurity = TRUE;
 	settings->TlsSecurity = FALSE;
@@ -835,7 +824,7 @@ BOOL csharp_freerdp_set_security_info(void* instance, BOOL useTLS, BOOL useNLA)
 void csharp_freerdp_set_hyperv_info(void* instance, char* pcb)
 {
 	freerdp* inst = (freerdp*)instance;
-	rdpSettings * settings = inst->settings;
+	rdpSettings* settings = inst->settings;
 	
 	settings->PreconnectionBlob = _strdup(pcb);
 	settings->VmConnectMode = TRUE;
@@ -847,7 +836,7 @@ void csharp_freerdp_set_hyperv_info(void* instance, char* pcb)
 void csharp_freerdp_set_keyboard_layout(void* instance, int layoutID)
 {
 	freerdp* inst = (freerdp*)instance;
-	rdpSettings * settings = inst->settings;
+	rdpSettings* settings = inst->settings;
 	
 	settings->KeyboardLayout = layoutID;
 }
@@ -855,7 +844,7 @@ void csharp_freerdp_set_keyboard_layout(void* instance, int layoutID)
 void csharp_freerdp_set_redirect_all_drives(void* instance, BOOL redirect)
 {
 	freerdp* inst = (freerdp*)instance;
-	rdpSettings * settings = inst->settings;
+	rdpSettings* settings = inst->settings;
 	
 	settings->RedirectDrives = redirect;
 }
@@ -863,7 +852,7 @@ void csharp_freerdp_set_redirect_all_drives(void* instance, BOOL redirect)
 void csharp_freerdp_set_redirect_home_drive(void* instance, BOOL redirect)
 {
 	freerdp* inst = (freerdp*)instance;
-	rdpSettings * settings = inst->settings;
+	rdpSettings* settings = inst->settings;
 	
 	settings->RedirectHomeDrive = redirect;
 }
@@ -871,7 +860,7 @@ void csharp_freerdp_set_redirect_home_drive(void* instance, BOOL redirect)
 void csharp_freerdp_set_redirect_printers(void* instance, BOOL redirect)
 {
 	freerdp* inst = (freerdp*)instance;
-	rdpSettings * settings = inst->settings;
+	rdpSettings* settings = inst->settings;
 	
 	settings->RedirectPrinters = redirect;
 }
@@ -879,7 +868,7 @@ void csharp_freerdp_set_redirect_printers(void* instance, BOOL redirect)
 void csharp_freerdp_set_redirect_smartcards(void* instance, BOOL redirect)
 {
 	freerdp* inst = (freerdp*)instance;
-	rdpSettings * settings = inst->settings;
+	rdpSettings* settings = inst->settings;
 	
 	settings->RedirectSmartCards = redirect;
 }
@@ -887,7 +876,7 @@ void csharp_freerdp_set_redirect_smartcards(void* instance, BOOL redirect)
 BOOL csharp_freerdp_set_data_directory(void* instance, const char* directory)
 {
 	freerdp* inst = (freerdp*)instance;
-	rdpSettings * settings = inst->settings;
+	rdpSettings* settings = inst->settings;
 
 	settings->HomePath = settings->ConfigPath = NULL;
 
@@ -905,32 +894,32 @@ BOOL csharp_freerdp_set_data_directory(void* instance, const char* directory)
 
 	return TRUE;
 
-	out_strdup_fail:
+out_strdup_fail:
 	free(config_dir_buf);
-	out_malloc_fail:
+out_malloc_fail:
 	return FALSE;
 }
 
 void csharp_freerdp_set_alternate_shell(void* instance, const char* shell)
 {
 	freerdp* inst = (freerdp*)instance;
-	rdpSettings * settings = inst->settings;
+	rdpSettings* settings = inst->settings;
 
-	settings->AlternateShell = (BYTE*)_strdup(shell);
+	settings->AlternateShell = _strdup(shell);
 }
 
 void csharp_freerdp_set_shell_working_directory(void* instance, const char* directory)
 {
 	freerdp* inst = (freerdp*)instance;
-	rdpSettings * settings = inst->settings;
+	rdpSettings* settings = inst->settings;
 
-	settings->ShellWorkingDirectory = (BYTE*)_strdup(directory);
+	settings->ShellWorkingDirectory = _strdup(directory);
 }
 
 BOOL csharp_freerdp_set_scale_factor(void* instance, UINT32 desktopScaleFactor, UINT32 deviceScaleFactor)
 {
 	freerdp* inst = (freerdp*)instance;
-	rdpSettings * settings = inst->settings;
+	rdpSettings* settings = inst->settings;
 	
 	settings->DesktopScaleFactor = desktopScaleFactor;
 	settings->DeviceScaleFactor = deviceScaleFactor;
@@ -998,6 +987,7 @@ void csharp_freerdp_send_input(void* instance, int character, BOOL down)
 	}
 	
 	int vk = cs_get_unicode(character);
+
 	if(vk != 0)
 	{
 		cs_send_unicode_key((freerdp*)instance, vk);
@@ -1007,14 +997,15 @@ void csharp_freerdp_send_input(void* instance, int character, BOOL down)
 		if(isupper(character))
 		{
 			character = tolower(character);
+
 			if(down)
-			{
 				cs_send_virtual_key((freerdp*)instance, VK_LSHIFT, TRUE);
-			}
+
 			shift_was_sent = TRUE;
 		}
 		
 		vk = cs_get_vk_code(character);
+
 		if(vk == 0)
 		{
 			// send as is
@@ -1176,7 +1167,7 @@ void csharp_freerdp_redirect_drive(void* instance, char* name, char* path)
 void csharp_freerdp_set_smart_sizing(void* instance, bool smartSizing)
 {
 	freerdp* inst = (freerdp*)instance;
-	rdpSettings * settings = inst->settings;
+	rdpSettings* settings = inst->settings;
 	
 	settings->SmartSizing = smartSizing;
 }
@@ -1184,7 +1175,7 @@ void csharp_freerdp_set_smart_sizing(void* instance, bool smartSizing)
 void csharp_freerdp_set_load_balance_info(void* instance, const char* info)
 {
 	freerdp* inst = (freerdp*)instance;
-	rdpSettings * settings = inst->settings;
+	rdpSettings* settings = inst->settings;
 
 	settings->LoadBalanceInfo = (BYTE*)_strdup(info);
 	settings->LoadBalanceInfoLength = (UINT32)strlen((char*) settings->LoadBalanceInfo);
@@ -1194,7 +1185,7 @@ BOOL csharp_freerdp_set_performance_flags(void* instance, BOOL disableWallpaper,
 					  BOOL bitmapCacheEnabled, BOOL disableFullWindowDrag, BOOL disableMenuAnims, BOOL disableThemes)
 {
 	freerdp* inst = (freerdp*)instance;
-	rdpSettings * settings = inst->settings;
+	rdpSettings* settings = inst->settings;
 	
 	settings->DisableWallpaper = disableWallpaper;
 	settings->AllowFontSmoothing = allowFontSmoothing;
@@ -1232,6 +1223,18 @@ void csharp_freerdp_sync_toggle_keys(void* instance)
 #endif
 }
 
+FREERDP_API BOOL csharp_freerdp_input_send_focus_in_event(void* instance, uint16_t toggleStates)
+{
+	rdpInput* input = ((freerdp*)instance)->input;
+	return freerdp_input_send_focus_in_event(input, toggleStates);
+}
+
+FREERDP_API BOOL csharp_freerdp_input_send_synchronize_event(void* instance, uint32_t flags)
+{
+	rdpInput* input = ((freerdp*)instance)->input;
+	return freerdp_input_send_synchronize_event(input, flags);
+}
+
 FREERDP_API void csharp_freerdp_create_virtual_channels(void* instance, const char* channelNames)
 {	
 	char *r, *end;
@@ -1239,13 +1242,15 @@ FREERDP_API void csharp_freerdp_create_virtual_channels(void* instance, const ch
 	char** p;
 	int status;
 	size_t count;
-	rdpSettings * settings = ((freerdp*)instance)->settings;
+	rdpSettings* settings = ((freerdp*)instance)->settings;
 
  	r = strdup(channelNames);
+
 	if(!r)
 		return;
 
 	token = end = r;
+
 	while(token != NULL)
 	{
 		StrSep(&end, ",");
