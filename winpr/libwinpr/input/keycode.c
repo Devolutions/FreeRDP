@@ -144,7 +144,7 @@ DWORD KEYCODE_TO_VKCODE_APPLE[256] = {
 	VK_F3,                /* APPLE_VK_F3 (0x63) */
 	VK_F8,                /* APPLE_VK_F8 (0x64) */
 	VK_F9,                /* APPLE_VK_F9 (0x65) */
-	0,                    /* APPLE_VK_JIS_Eisu (0x66) */
+	VK_ABNT_C1,           /* APPLE_VK_JIS_Eisu (0x66) */
 	VK_F11,               /* APPLE_VK_F11 (0x67) */
 	0,                    /* APPLE_VK_JIS_Kana (0x68) */
 	VK_SNAPSHOT | KBDEXT, /* APPLE_VK_F13 (0x69) */
