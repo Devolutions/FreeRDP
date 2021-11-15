@@ -73,9 +73,12 @@ FREERDP_API BOOL csharp_freerdp_set_performance_flags(void* instance,
 							   BOOL disableFullWindowDrag,
 							   BOOL disableMenuAnims,
 							   BOOL disableThemes);
+FREERDP_API void csharp_freerdp_set_tcpacktimeout(void* instance, UINT32 value);
+FREERDP_API BOOL csharp_freerdp_set_value_for_name(void* settings, const char* name, const char* value);
 FREERDP_API BOOL csharp_shall_disconnect(void* instance);
 FREERDP_API BOOL csharp_waitforsingleobject(void* instance);
 FREERDP_API BOOL csharp_check_event_handles(void* instance, void* buffer);
+
 
 FREERDP_API void csharp_freerdp_send_clipboard_data(void* instance, BYTE* data, int length);
 FREERDP_API void csharp_freerdp_send_cursor_event(void* instance, int x, int y, int flags);
