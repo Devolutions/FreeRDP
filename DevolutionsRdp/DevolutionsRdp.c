@@ -1198,6 +1198,22 @@ BOOL csharp_freerdp_set_performance_flags(void* instance, BOOL disableWallpaper,
 	return TRUE;
 }
 
+void csharp_freerdp_set_tcpacktimeout(void* instance, UINT32 value)
+{
+	freerdp* inst = (freerdp*)instance;
+	rdpSettings* settings = inst->settings;
+
+	settings->TcpAckTimeout = value;
+}
+
+BOOL csharp_freerdp_set_value_for_name(void* instance, const char* name, const char* value)
+{
+	freerdp* inst = (freerdp*)instance;
+	rdpSettings* settings = inst->settings;
+
+	return freerdp_settings_set_value_for_name(settings, name, value);
+}
+
 void csharp_freerdp_sync_toggle_keys(void* instance)
 {
 #ifdef WIN32
