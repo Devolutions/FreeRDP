@@ -285,7 +285,6 @@ UINT freerdp_rdpsnd_client_subsystem_entry(PFREERDP_RDPSND_DEVICE_ENTRY_POINTS p
 
 	p->device.Open = rdpsnd_ios_open;
 	p->device.FormatSupported = rdpsnd_ios_format_supported;
-	p->device.SetFormat = rdpsnd_ios_set_format;
 	p->device.SetVolume = rdpsnd_ios_set_volume;
 	p->device.Play = rdpsnd_ios_play;
 	p->device.Start = rdpsnd_ios_start;
