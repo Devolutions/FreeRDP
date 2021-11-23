@@ -1,9 +1,8 @@
 # FreeRDP: A Remote Desktop Protocol Implementation
 # FreeRDP cmake build script
 #
-# Copyright 2012 Laxmikant Rashinkar <LK.Rashinkar@gmail.com>
-# Copyright 2012 Marc-Andre Moreau <marcandre.moreau@gmail.com>
-# Copyright 2013 Corey Clayton <can.of.tuna@gmail.com>
+# Copyright (c) 2015 Armin Novak <armin.novak@thincast.com>
+# Copyright (c) 2015 Thincast Technologies GmbH
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,31 +16,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-define_channel_client_subsystem("rdpsnd" "mac" "")
-
-find_library(COCOA_LIBRARY Cocoa REQUIRED)
-FIND_LIBRARY(CORE_FOUNDATION CoreFoundation)
-FIND_LIBRARY(CORE_AUDIO CoreAudio REQUIRED)
-FIND_LIBRARY(AUDIO_TOOL AudioToolbox REQUIRED)
-FIND_LIBRARY(AV_FOUNDATION AVFoundation REQUIRED)
+define_channel_client_subsystem("audin" "ios" "")
+FIND_LIBRARY(CORE_AUDIO CoreAudio)
+FIND_LIBRARY(AVFOUNDATION AVFoundation)
+FIND_LIBRARY(AUDIO_TOOL AudioToolbox)
 
 set(${MODULE_PREFIX}_SRCS
-	rdpsnd_mac.m)
+	audin_ios.m)
 
 include_directories(..)
-include_directories(${MACAUDIO_INCLUDE_DIRS})
+include_directories(${MAC_INCLUDE_DIRS})
 
 add_channel_client_subsystem_library(${MODULE_PREFIX} ${MODULE_NAME} ${CHANNEL_NAME} "" TRUE "")
 
-set(${MODULE_PREFIX}_LIBS ${${MODULE_PREFIX}_LIBS} 
-    ${AUDIO_TOOL}
-    ${AV_FOUNDATION}
-    ${CORE_AUDIO}
-    ${COCOA_LIBRARY}
-    ${CORE_FOUNDATION})
-
-set(${MODULE_PREFIX}_LIBS ${${MODULE_PREFIX}_LIBS} freerdp winpr)
+set(${MODULE_PREFIX}_LIBS freerdp ${AVFOUNDATION} ${CORE_AUDIO} ${AUDIO_TOOL} winpr)
 
 target_link_libraries(${MODULE_NAME} ${${MODULE_PREFIX}_LIBS})
-
-set_property(TARGET ${MODULE_NAME} PROPERTY FOLDER "Channels/${CHANNEL_NAME}/Client/Mac")

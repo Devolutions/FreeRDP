@@ -977,6 +977,9 @@ UINT DVCPluginEntry(IDRDYNVC_ENTRY_POINTS* pEntryPoints)
 	AUDIN_PLUGIN* audin;
 	struct SubsystemEntry entries[] =
 	{
+#if defined(WITH_IOSAUDIO)
+		{ "ios", "" },
+#endif
 #if defined(WITH_PULSE)
 		{ "pulse", "" },
 #endif
