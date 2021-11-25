@@ -10,6 +10,7 @@
 #include <assert.h>
 #include <ctype.h>
 #include <freerdp/log.h>
+#include <winpr/credentials.h>
 #include <winpr/environment.h>
 #include <winpr/string.h>
 
@@ -23,6 +24,7 @@ static BOOL cs_pre_connect(freerdp* instance);
 static BOOL cs_post_connect(freerdp* instance);
 static void cs_post_disconnect(freerdp* instance);
 static BOOL cs_authenticate(freerdp* instance, char** username, char** password, char** domain);
+static BOOL cs_gw_authenticate(freerdp* instance, char** username, char** password, char** domain);
 static DWORD cs_verify_certificate(freerdp* instance, const char* common_name, const char* subject, const char* issuer, const char* fingerprint, BOOL host_mismatch);
 static int cs_verify_x509_certificate(freerdp* instance, const BYTE* data, size_t length, const char* hostname, uint16_t port, DWORD flags);
 static char** freerdp_command_line_parse_comma_separated_values_offset(const char* name, char* list, size_t* count);
@@ -224,6 +226,7 @@ static BOOL cs_context_new(freerdp* instance, rdpContext* context)
 	instance->PostConnect = cs_post_connect;
 	instance->PostDisconnect = cs_post_disconnect;
 	instance->Authenticate = cs_authenticate;
+	instance->GatewayAuthenticate = cs_gw_authenticate;
 	instance->VerifyCertificate = cs_verify_certificate;
 	instance->VerifyX509Certificate = cs_verify_x509_certificate;
 
@@ -417,9 +420,61 @@ static void cs_post_disconnect(freerdp* instance)
 	gdi_free(instance);
 }
 
+static BOOL cs_do_authenticate(freerdp* instance, char** username, char** password, char** domain, fnOnAuthenticate callback, BOOL result)
+{
+	csContext* context = (csContext*)instance->context;
+
+	if (callback)
+	{
+		result = FALSE;
+		char pszUsername[CRED_MAX_USERNAME_LENGTH + 1];
+		char pszPassword[(CRED_MAX_CREDENTIAL_BLOB_SIZE / 2) + 1];
+		char pszDomain[CRED_MAX_DOMAIN_TARGET_NAME_LENGTH + 1];
+
+		ZeroMemory(pszUsername, sizeof(pszUsername));
+
+		if (*username)
+			strncpy(pszUsername, *username, sizeof(pszUsername) - 1);
+
+		ZeroMemory(pszPassword, sizeof(pszPassword));
+		
+		if (*password)
+			strncpy(pszPassword, *password, sizeof(pszPassword) - 1);
+
+		ZeroMemory(pszDomain, sizeof(pszDomain));
+		
+		if (*domain)
+			strncpy(pszDomain, *domain, sizeof(pszDomain) - 1);
+		
+		result = callback(instance, pszUsername, (int)sizeof(pszUsername), 
+		  pszPassword, (int)sizeof(pszPassword), pszDomain, (int)sizeof(pszDomain));
+		
+		if (result)
+		{
+			free(*username);
+			*username = _strdup(pszUsername);
+
+			free(*password);
+			*password = _strdup(pszPassword);
+			
+			free(*domain);
+			*domain = _strdup(pszDomain);
+		}
+	}
+		
+	return result;
+}
+
 static BOOL cs_authenticate(freerdp* instance, char** username, char** password, char** domain)
 {
-	return TRUE;
+	csContext* context = (csContext*)instance->context;
+	return cs_do_authenticate(instance, username, password, domain, context->onAuthenticate, TRUE);
+}
+
+static BOOL cs_gw_authenticate(freerdp* instance, char** username, char** password, char** domain)
+{
+	csContext* context = (csContext*)instance->context;
+	return cs_do_authenticate(instance, username, password, domain, context->onGwAuthenticate, FALSE);
 }
 
 static DWORD cs_verify_certificate(freerdp* instance, const char* common_name, const char* subject, const char* issuer, const char* fingerprint, BOOL host_mismatch)
@@ -441,6 +496,55 @@ void cs_error_info(void* ctx, ErrorInfoEventArgs* e)
 	{
 		csc->onError(context->instance, e->code);
 	}
+}
+
+BOOL csharp_configure_log_callback(int wlogLevel, wLogCallbackMessage_t fn)
+{
+	wLog* root;
+	wLogAppender* appender;
+	wLogCallbacks callbacks;
+
+	ZeroMemory((void*) &callbacks, sizeof(wLogCallbacks));
+	callbacks.message = fn;
+
+	if (wlogLevel > WLOG_OFF)
+		wlogLevel = WLOG_OFF;
+
+	root = WLog_GetRoot();
+
+	WLog_SetLogLevel(root, wlogLevel);
+	WLog_SetLogAppenderType(root, WLOG_APPENDER_CALLBACK);
+
+	appender = WLog_GetLogAppender(root);
+
+	if (!WLog_ConfigureAppender(appender, "callbacks", (void*) &callbacks))
+		return FALSE;
+
+	return WLog_Init();
+}
+
+BOOL csharp_configure_log_file(int wlogLevel, const char* logPath, const char* logName)
+{
+	wLog* root;
+	wLogAppender* appender;
+
+	if (wlogLevel > WLOG_OFF)
+		wlogLevel = WLOG_OFF;
+
+	root = WLog_GetRoot();
+
+	WLog_SetLogLevel(root, wlogLevel);
+	WLog_SetLogAppenderType(root, WLOG_APPENDER_FILE);
+
+	appender = WLog_GetLogAppender(root);
+
+	if (!WLog_ConfigureAppender(appender, "outputfilename", (void*) logName))
+		return FALSE;
+
+	if (!WLog_ConfigureAppender(appender, "outputfilepath", (void*) logPath))
+		return FALSE;
+
+	return WLog_Init();
 }
 
 BOOL cs_client_global_init()
@@ -651,7 +755,7 @@ BOOL csharp_freerdp_set_gateway_settings(void* instance, const char* hostname, U
 	freerdp* inst = (freerdp*)instance;
 	rdpSettings* settings = inst->settings;
 	
-	settings->GatewayPort     = port;
+	settings->GatewayPort = port;
 	settings->GatewayEnabled = TRUE;
 	settings->GatewayUseSameCredentials = FALSE;
 	settings->GatewayHostname = strdup(hostname);
@@ -685,28 +789,24 @@ BOOL csharp_freerdp_set_client_hostname(void* instance, const char* clientHostna
 	return TRUE;
 }
 
-BOOL csharp_freerdp_set_console_mode(void* instance, BOOL useConsoleMode, BOOL useRestrictedAdminMode)
+void csharp_freerdp_set_console_mode(void* instance, BOOL useConsoleMode, BOOL useRestrictedAdminMode)
 {
 	freerdp* inst = (freerdp*)instance;
 	rdpSettings* settings = inst->settings;
 
 	settings->ConsoleSession = useConsoleMode;
 	settings->RestrictedAdminModeRequired = useRestrictedAdminMode;
-
-	return TRUE;
 }
 
-BOOL csharp_freerdp_set_redirect_clipboard(void* instance, BOOL redirectClipboard)
+void csharp_freerdp_set_redirect_clipboard(void* instance, BOOL redirectClipboard)
 {
 	freerdp* inst = (freerdp*)instance;
 	rdpSettings* settings = inst->settings;
 
 	settings->RedirectClipboard = redirectClipboard;
-
-	return TRUE;
 }
 
-BOOL csharp_freerdp_set_redirect_audio(void* instance, int redirectSound, BOOL redirectCapture)
+void csharp_freerdp_set_redirect_audio(void* instance, int redirectSound, BOOL redirectCapture)
 {
 	freerdp* inst = (freerdp*)instance;
 	rdpSettings* settings = inst->settings;
@@ -737,8 +837,6 @@ BOOL csharp_freerdp_set_redirect_audio(void* instance, int redirectSound, BOOL r
 		freerdp_client_add_dynamic_channel(settings, count, p);
 		free(p);
 	}
-	
-	return TRUE;
 }
 
 BOOL csharp_freerdp_set_connection_info(void* instance, const char* hostname, const char* username, const char* password, const char* domain, UINT32 width, UINT32 height, UINT32 color_depth, UINT32 port, int codecLevel)
@@ -803,7 +901,7 @@ out_fail_strdup:
 	return FALSE;
 }
 
-BOOL csharp_freerdp_set_security_info(void* instance, BOOL useTLS, BOOL useNLA)
+void csharp_freerdp_set_security_info(void* instance, BOOL useTLS, BOOL useNLA)
 {
 	freerdp* inst = (freerdp*)instance;
 	rdpSettings* settings = inst->settings;
@@ -817,8 +915,6 @@ BOOL csharp_freerdp_set_security_info(void* instance, BOOL useTLS, BOOL useNLA)
 
 	if(useNLA)
 		settings->NlaSecurity = TRUE;
-
-	return true;
 }
 
 void csharp_freerdp_set_hyperv_info(void* instance, char* pcb)
@@ -916,15 +1012,13 @@ void csharp_freerdp_set_shell_working_directory(void* instance, const char* dire
 	settings->ShellWorkingDirectory = _strdup(directory);
 }
 
-BOOL csharp_freerdp_set_scale_factor(void* instance, UINT32 desktopScaleFactor, UINT32 deviceScaleFactor)
+void csharp_freerdp_set_scale_factor(void* instance, UINT32 desktopScaleFactor, UINT32 deviceScaleFactor)
 {
 	freerdp* inst = (freerdp*)instance;
 	rdpSettings* settings = inst->settings;
 	
 	settings->DesktopScaleFactor = desktopScaleFactor;
 	settings->DeviceScaleFactor = deviceScaleFactor;
-	
-	return TRUE;
 }
 
 BOOL csharp_shall_disconnect(void* instance)
@@ -1025,6 +1119,35 @@ void csharp_freerdp_send_cursor_event(void* instance, int x, int y, int flags)
 	freerdp_input_send_mouse_event(((freerdp*)instance)->input, flags, x, y);
 }
 
+void csharp_freerdp_send_clipboard_text(void* instance, const char* text)
+{
+	size_t len = 0;
+	UINT32 formatId;
+	freerdp* inst = (freerdp*)instance;
+	csContext* ctxt = (csContext*)inst->context;
+
+	if(!ctxt->clipboard)
+	{
+		WLog_ERR(TAG, "Clipboard not initialized yet");
+		return;
+	}
+
+	if (text)
+		len = strlen(text);
+
+	if (len)
+	{
+		formatId = ClipboardRegisterFormat(ctxt->clipboard, "UTF8_STRING");
+		ClipboardSetData(ctxt->clipboard, formatId, (void*) text, len + 1);
+	}
+	else
+	{
+		ClipboardEmpty(ctxt->clipboard);
+	}
+
+	cs_cliprdr_send_client_format_list(ctxt->cliprdr);
+}
+
 void csharp_freerdp_send_clipboard_data(void* instance, BYTE* buffer, int length)
 {
 	int size;
@@ -1063,19 +1186,12 @@ void csharp_freerdp_send_clipboard_data(void* instance, BYTE* buffer, int length
 	cs_cliprdr_send_client_format_list(ctxt->cliprdr);
 }
 
-void csharp_set_log_output(const char* path, const char* name)
-{
-	SetEnvironmentVariableA("WLOG_APPENDER", "FILE");
-	SetEnvironmentVariableA("WLOG_LEVEL", "DEBUG");
-	SetEnvironmentVariableA("WLOG_FILEAPPENDER_OUTPUT_FILE_PATH", path);
-	SetEnvironmentVariableA("WLOG_FILEAPPENDER_OUTPUT_FILE_NAME", name);
-}
-
-void csharp_set_on_authenticate(void* instance, pAuthenticate fn)
+void csharp_set_on_authenticate(void* instance, fnOnAuthenticate fn)
 {
 	freerdp* inst = (freerdp*)instance;
+	csContext* ctxt = (csContext*)inst->context;
 	
-	inst->Authenticate = fn;
+	ctxt->onAuthenticate = fn;
 }
 
 void csharp_set_on_clipboard_update(void* instance, fnOnClipboardUpdate fn)
@@ -1086,11 +1202,12 @@ void csharp_set_on_clipboard_update(void* instance, fnOnClipboardUpdate fn)
 	ctxt->onClipboardUpdate = fn;
 }
 
-void csharp_set_on_gateway_authenticate(void* instance, pAuthenticate fn)
+void csharp_set_on_gateway_authenticate(void* instance, fnOnAuthenticate fn)
 {
 	freerdp* inst = (freerdp*)instance;
+	csContext* ctxt = (csContext*)inst->context;
 	
-	inst->GatewayAuthenticate = fn;
+	ctxt->onGwAuthenticate = fn;
 }
 
 void csharp_set_on_verify_certificate(void* instance, pVerifyCertificate fn)
@@ -1164,7 +1281,7 @@ void csharp_freerdp_redirect_drive(void* instance, char* name, char* path)
 	freerdp_client_add_device_channel(inst->settings, 3, d);
 }
 
-void csharp_freerdp_set_smart_sizing(void* instance, bool smartSizing)
+void csharp_freerdp_set_smart_sizing(void* instance, BOOL smartSizing)
 {
 	freerdp* inst = (freerdp*)instance;
 	rdpSettings* settings = inst->settings;
@@ -1181,7 +1298,7 @@ void csharp_freerdp_set_load_balance_info(void* instance, const char* info)
 	settings->LoadBalanceInfoLength = (UINT32)strlen((char*) settings->LoadBalanceInfo);
 }
 
-BOOL csharp_freerdp_set_performance_flags(void* instance, BOOL disableWallpaper, BOOL allowFontSmoothing, BOOL allowDesktopComposition,
+void csharp_freerdp_set_performance_flags(void* instance, BOOL disableWallpaper, BOOL allowFontSmoothing, BOOL allowDesktopComposition,
 					  BOOL bitmapCacheEnabled, BOOL disableFullWindowDrag, BOOL disableMenuAnims, BOOL disableThemes)
 {
 	freerdp* inst = (freerdp*)instance;
@@ -1194,8 +1311,6 @@ BOOL csharp_freerdp_set_performance_flags(void* instance, BOOL disableWallpaper,
 	settings->DisableFullWindowDrag = disableFullWindowDrag;
 	settings->DisableMenuAnims = disableMenuAnims;
 	settings->DisableThemes = disableThemes;
-	
-	return TRUE;
 }
 
 void csharp_freerdp_set_tcpacktimeout(void* instance, UINT32 value)
