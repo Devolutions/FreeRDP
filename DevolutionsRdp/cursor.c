@@ -20,11 +20,11 @@ BOOL cs_Pointer_New(rdpContext* context, rdpPointer* pointer)
 	int pixelFormat = PIXEL_FORMAT_RGBA32;
 #endif
 	
-	if (freerdp_image_copy_from_pointer_data(cursor_data, pixelFormat,
+	if (!freerdp_image_copy_from_pointer_data(cursor_data, pixelFormat,
 						  pointer->width * 4, 0, 0, pointer->width, pointer->height,
 						  pointer->xorMaskData, pointer->lengthXorMask,
 						  pointer->andMaskData, pointer->lengthAndMask,
-						  pointer->xorBpp, NULL) < 0)
+						  pointer->xorBpp, NULL))
 	{
 		free(cursor_data);
 		return FALSE;
@@ -32,7 +32,9 @@ BOOL cs_Pointer_New(rdpContext* context, rdpPointer* pointer)
 	
 	if(csc->onNewCursor)
 	{
-		csc->onNewCursor(context->instance, pointer, cursor_data, pointer->xPos, pointer->yPos, pointer->width, pointer->height, pointer->xPos, pointer->yPos);
+		csc->onNewCursor(context->instance, pointer, cursor_data, 
+		  pointer->xPos, pointer->yPos, pointer->width, pointer->height, 
+		  pointer->xPos, pointer->yPos);
 	}
 	else
 	{
