@@ -59,20 +59,11 @@ else()
 endif()
 
 add_library(${MODULE_NAME} ${TARGET_TYPE} ${${MODULE_PREFIX}_HEADERS} ${${MODULE_PREFIX}_SOURCES} ${${MODULE_PREFIX}_RESOURCES})
-
-if(WIN32)
-	set(MBEDTLS_LIBRARIES "${MBEDTLS_LIB_DIR}/mbedtls.lib;${MBEDTLS_LIB_DIR}/mbedcrypto.lib;${MBEDTLS_LIB_DIR}/mbedx509.lib")
-else()
-	set(MBEDTLS_LIBRARIES "${MBEDTLS_LIB_DIR}/libmbedtls.a;${MBEDTLS_LIB_DIR}/libmbedcrypto.a;${MBEDTLS_LIB_DIR}/libmbedx509.a")
-endif()
-
 target_link_libraries(${MODULE_NAME} freerdp freerdp-client winpr)
-target_link_libraries(${MODULE_NAME} ${MBEDTLS_LIBRARIES})
-# target_link_libraries(${MODULE_NAME} pthread)
+
 if(ANDROID)
 	target_link_libraries(${MODULE_NAME} log dl m)
 endif()
-# target_link_libraries(${MODULE_NAME} cups)
 
 if(WIN32)
 	target_link_libraries(${MODULE_NAME} winmm ntdsapi rpcrt4 dbghelp)
