@@ -160,6 +160,14 @@ endif()
 
 set(WINPR_RESOURCE_ROOT ${CMAKE_INSTALL_FULL_DATAROOTDIR})
 
+if(MSVC)
+ 	include(MSVCRuntime)
+ 	if(NOT DEFINED MSVC_RUNTIME)
+ 	  set(MSVC_RUNTIME "dynamic")
+ 	endif()
+ 	configure_msvc_runtime()
+endif()
+
 # Quite the compatibility show here (newest to oldest):
 # * <base>[/<vendor>]/<product>[<version>]
 # * <base>[/<vendor>]/WinPR[<version>]
