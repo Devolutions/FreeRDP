@@ -286,7 +286,7 @@ static BOOL cs_pre_connect(freerdp* instance)
 
 	if (!context->cache)
 	{
-		if (!(context->cache = cache_new(settings)))
+		if (!(context->cache = cache_new(context)))
 			return FALSE;
 	}
 
