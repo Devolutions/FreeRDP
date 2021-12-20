@@ -174,7 +174,7 @@ static void cs_send_virtual_key(freerdp* instance, int vk, BOOL down)
 	scancode = GetVirtualScanCodeFromVirtualKeyCode(vk, 4);
 	flags = (down ? KBD_FLAGS_DOWN : KBD_FLAGS_RELEASE);
 	flags |= ((scancode & KBDEXT) ? KBD_FLAGS_EXTENDED : 0);
-	freerdp_input_send_keyboard_event(instance->input, flags, scancode);
+	freerdp_input_send_keyboard_event(instance->input, flags, scancode & 0xFF);
 }
 
 static void cs_send_unicode_key(freerdp* instance, int vk)
