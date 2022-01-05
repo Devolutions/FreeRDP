@@ -10,7 +10,6 @@
 #include <assert.h>
 #include <ctype.h>
 #include <freerdp/log.h>
-#include <winpr/credentials.h>
 #include <winpr/environment.h>
 #include <winpr/string.h>
 
@@ -19,6 +18,11 @@
 #include "cursor.h"
 
 #define TAG "DevolutionsRdp"
+
+// Credentials module was removed from winpr
+#define CRED_MAX_USERNAME_LENGTH (256 + 1 + 256)
+#define CRED_MAX_DOMAIN_TARGET_NAME_LENGTH (256 + 1 + 80)
+#define CRED_MAX_CREDENTIAL_BLOB_SIZE 512
 
 static BOOL cs_pre_connect(freerdp* instance);
 static BOOL cs_post_connect(freerdp* instance);
