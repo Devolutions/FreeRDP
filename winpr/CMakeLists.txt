@@ -49,30 +49,6 @@ if(NOT FREERDP_UNIFIED_BUILD)
 
   # MSVC compatibility with system headers
   add_compile_definitions(NONAMELESSUNION)
-
-  set(OPENSSL_FEATURE_TYPE "RECOMMENDED")
-  set(OPENSSL_FEATURE_PURPOSE "cryptography")
-  set(OPENSSL_FEATURE_DESCRIPTION "encryption, certificate validation, hashing functions")
-
-  set(MBEDTLS_FEATURE_TYPE "OPTIONAL")
-  set(MBEDTLS_FEATURE_PURPOSE "cryptography")
-  set(MBEDTLS_FEATURE_DESCRIPTION "encryption, certificate validation, hashing functions")
-
-  option(WITH_LIBRESSL "build with LibreSSL" OFF)
-  if(WITH_LIBRESSL)
-    find_package(LibreSSL REQUIRED)
-    set(OPENSSL_INCLUDE_DIR ${LIBRESSL_INCLUDE_DIR})
-    set(OPENSSL_LIBRARIES ${LIBRESSL_LIBRARIES})
-    set(OPENSSL_CRYPTO_LIBRARIES ${LIBRESSL_LIBRARIES})
-    set(WITH_OPENSSL ON)
-    set(OPENSSL_FOUND ON)
-    add_compile_definitions("WITH_LIBRESSL")
-    add_compile_definitions("WITH_OPENSSL")
-  else()
-    find_feature(OpenSSL ${OPENSSL_FEATURE_TYPE} ${OPENSSL_FEATURE_PURPOSE} ${OPENSSL_FEATURE_DESCRIPTION})
-    find_feature(MbedTLS ${MBEDTLS_FEATURE_TYPE} ${MBEDTLS_FEATURE_PURPOSE} ${MBEDTLS_FEATURE_DESCRIPTION})
-  endif()
-
 endif()
 
 set(WINPR_PC_REQUIRES_PRIVATE "" CACHE INTERNAL "dependencies")
@@ -241,6 +217,13 @@ if(NOT IOS)
 endif()
 
 # Include files
+if(UNIX OR CYGWIN)
+	option(WITH_POLL "Check for and include poll.h" ON)
+	if (WITH_POLL)
+		check_include_files(poll.h HAVE_POLL_H)
+	endif()
+endif()
+
 if(NOT IOS)
   check_include_files(fcntl.h WINPR_HAVE_FCNTL_H)
   check_include_files(aio.h WINPR_HAVE_AIO_H)
@@ -303,6 +286,56 @@ if(NOT WIN32 AND NOT IOS)
         OR WINPR_HAVE_PTHREAD_MUTEX_TIMEDLOCK_LIBS
   )
   list(REMOVE_ITEM CMAKE_REQUIRED_LIBRARIES pthread)
+endif()
+
+set(OPENSSL_FEATURE_TYPE "RECOMMENDED")
+set(OPENSSL_FEATURE_PURPOSE "cryptography")
+set(OPENSSL_FEATURE_DESCRIPTION "encryption, certificate validation, hashing functions")
+
+set(MBEDTLS_FEATURE_TYPE "OPTIONAL")
+set(MBEDTLS_FEATURE_PURPOSE "cryptography")
+set(MBEDTLS_FEATURE_DESCRIPTION "encryption, certificate validation, hashing functions")
+
+option(WITH_LIBRESSL "build with LibreSSL" OFF)
+if (WITH_LIBRESSL)
+	find_package(LibreSSL REQUIRED)
+	set(OPENSSL_INCLUDE_DIR ${LIBRESSL_INCLUDE_DIR})
+	set(OPENSSL_LIBRARIES ${LIBRESSL_LIBRARIES})
+	set(OPENSSL_CRYPTO_LIBRARIES ${LIBRESSL_LIBRARIES})
+	set(WITH_OPENSSL ON)
+	set(OPENSSL_FOUND ON)
+  add_compile_definitions("WITH_LIBRESSL")
+  add_compile_definitions("WITH_OPENSSL")
+else()
+	find_feature(OpenSSL ${OPENSSL_FEATURE_TYPE} ${OPENSSL_FEATURE_PURPOSE} ${OPENSSL_FEATURE_DESCRIPTION})
+	find_feature(MbedTLS ${MBEDTLS_FEATURE_TYPE} ${MBEDTLS_FEATURE_PURPOSE} ${MBEDTLS_FEATURE_DESCRIPTION})
+endif()
+
+if (NOT OPENSSL_FOUND AND NOT MBEDTLS_FOUND AND NOT LibreSSL_FOUND)
+	message(FATAL_ERROR "OpenSSL or MBedTLS are required, none enabled/found")
+endif()
+
+if(WITH_OPENSSL AND OPENSSL_FOUND)
+	add_definitions("-DWITH_OPENSSL")
+endif()
+
+if(WITH_MBEDTLS AND MBEDTLS_FOUND)
+	add_definitions("-DWITH_MBEDTLS")
+endif()
+
+enable_testing()
+
+if(MSVC)
+	set(TESTING_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}")
+else()
+	set(TESTING_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/Testing")
+endif()
+
+if (NOT WIN32 AND NOT IOS AND NOT ANDROID)
+	set(PKCS11_DEFAULT ON)
+else()
+  find_feature(OpenSSL ${OPENSSL_FEATURE_TYPE} ${OPENSSL_FEATURE_PURPOSE} ${OPENSSL_FEATURE_DESCRIPTION})
+  find_feature(MbedTLS ${MBEDTLS_FEATURE_TYPE} ${MBEDTLS_FEATURE_PURPOSE} ${MBEDTLS_FEATURE_DESCRIPTION})
 endif()
 
 if(NOT OPENSSL_FOUND AND NOT MBEDTLS_FOUND AND NOT LibreSSL_FOUND)
