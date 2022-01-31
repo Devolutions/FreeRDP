@@ -12,6 +12,7 @@
 #include <freerdp/log.h>
 #include <winpr/environment.h>
 #include <winpr/string.h>
+#include <winpr/sysinfo.h>
 
 #include "DevolutionsRdp.h"
 #include "clipboard.h"
@@ -23,6 +24,8 @@
 #define CRED_MAX_USERNAME_LENGTH (256 + 1 + 256)
 #define CRED_MAX_DOMAIN_TARGET_NAME_LENGTH (256 + 1 + 80)
 #define CRED_MAX_CREDENTIAL_BLOB_SIZE 512
+
+#define RESIZE_MIN_DELAY 200 /* minimum delay in ms between two resizes */
 
 static BOOL cs_pre_connect(freerdp* instance);
 static BOOL cs_post_connect(freerdp* instance);
@@ -198,6 +201,10 @@ void cs_OnChannelConnectedEventHandler(rdpContext* context, ChannelConnectedEven
 	{
 		cs_cliprdr_init(csc, (CliprdrClientContext*) e->pInterface);
 	}
+	else if (strcmp(e->name, DISP_DVC_CHANNEL_NAME) == 0)
+	{
+		csc->disp = (DispClientContext*)e->pInterface;
+	}
 	else if(strncmp(e->name, "RDM", 3) == 0)
 	{
 		cs_vrtchn_init(csc, (VirtChanContext*) e->pInterface);
@@ -215,6 +222,10 @@ void cs_OnChannelDisconnectedEventHandler(rdpContext* context, ChannelDisconnect
 	else if (strcmp(e->name, CLIPRDR_SVC_CHANNEL_NAME) == 0)
 	{
 		cs_cliprdr_uninit(csc, (CliprdrClientContext*) e->pInterface);
+	}
+	else if (strcmp(e->name, DISP_DVC_CHANNEL_NAME) == 0)
+	{
+		csc->disp = NULL;
 	}
 	else if(strncmp(e->name, "RDM", 3) == 0)
 	{
@@ -1000,6 +1011,27 @@ out_malloc_fail:
 	return FALSE;
 }
 
+void csharp_freerdp_set_support_display_control(void* instance, BOOL supportDisplayControl)
+{
+	freerdp* inst = (freerdp*)instance;
+	rdpSettings* settings = inst->settings;
+
+	settings->SupportDisplayControl = supportDisplayControl;
+}
+
+BOOL csharp_freerdp_set_dynamic_resolution_update(void* instance, BOOL dynamicResolutionUpdate)
+{
+	freerdp* inst = (freerdp*)instance;
+	rdpSettings* settings = inst->settings;
+
+	if (settings->SmartSizing && dynamicResolutionUpdate) /* Smart sizing and dynamic resolution are mutually exclusing */
+		return FALSE;
+
+	settings->DynamicResolutionUpdate = dynamicResolutionUpdate;
+
+	return TRUE;
+}
+
 void csharp_freerdp_set_alternate_shell(void* instance, const char* shell)
 {
 	freerdp* inst = (freerdp*)instance;
@@ -1116,6 +1148,61 @@ void csharp_freerdp_send_input(void* instance, int character, BOOL down)
 		if(shift_was_sent && !down)
 			cs_send_virtual_key((freerdp*)instance, VK_LSHIFT, FALSE);
 	}
+}
+
+BOOL csharp_freerdp_send_monitor_layout(void* instance, uint32_t targetWidth, uint32_t targetHeight)
+{
+	BOOL status = FALSE;
+	freerdp* inst = (freerdp*)instance;
+	rdpSettings* settings = inst->settings;
+	csContext* csc = (csContext*)inst->context;
+	int rc = CHANNEL_RC_OK;
+	DISPLAY_CONTROL_MONITOR_LAYOUT layout = { 0 };
+
+	if (!settings->DynamicResolutionUpdate || !csc->disp)
+	{
+		WLog_DBG(TAG, "send_monitor_update without disp channel");
+		goto exit;
+	}
+
+	if ((GetTickCount64() - csc->lastSentDate) < RESIZE_MIN_DELAY)
+	{
+		WLog_DBG(TAG, "send_monitor_update too fast");
+		goto exit;		
+	}
+
+	if (settings->SmartSizingWidth == targetWidth &&
+	    settings->SmartSizingHeight == targetHeight)
+	{
+		WLog_DBG(TAG, "send_monitor_update nothing to do");
+		goto exit;				
+	}
+
+	layout.Flags = DISPLAY_CONTROL_MONITOR_PRIMARY;
+	layout.Top = layout.Left = 0;
+	layout.Width = targetWidth;
+	layout.Height = targetHeight;
+	layout.Orientation = settings->DesktopOrientation;
+	layout.DesktopScaleFactor = settings->DesktopScaleFactor;
+	layout.DeviceScaleFactor = settings->DeviceScaleFactor;
+	layout.PhysicalWidth = targetWidth;
+	layout.PhysicalHeight = targetHeight;
+
+	rc = IFCALLRESULT(CHANNEL_RC_OK, csc->disp->SendMonitorLayout, csc->disp, 1, &layout);
+	status = rc == CHANNEL_RC_OK;
+
+	if (!status)
+	{
+		WLog_ERR(TAG, "send_monitor_update failed (%d)", rc);
+		goto exit;
+	}
+
+	settings->SmartSizingWidth = targetWidth;
+	settings->SmartSizingHeight = targetHeight;
+	csc->lastSentDate = GetTickCount64();
+
+exit:
+	return status;
 }
 
 void csharp_freerdp_send_cursor_event(void* instance, int x, int y, int flags)
@@ -1285,12 +1372,17 @@ void csharp_freerdp_redirect_drive(void* instance, char* name, char* path)
 	freerdp_client_add_device_channel(inst->settings, 3, d);
 }
 
-void csharp_freerdp_set_smart_sizing(void* instance, BOOL smartSizing)
+BOOL csharp_freerdp_set_smart_sizing(void* instance, BOOL smartSizing)
 {
 	freerdp* inst = (freerdp*)instance;
 	rdpSettings* settings = inst->settings;
 	
+	if (settings->DynamicResolutionUpdate && smartSizing) /* Smart sizing and dynamic resolution are mutually exclusing */
+		return FALSE;
+
 	settings->SmartSizing = smartSizing;
+
+	return TRUE;
 }
 
 void csharp_freerdp_set_load_balance_info(void* instance, const char* info)
