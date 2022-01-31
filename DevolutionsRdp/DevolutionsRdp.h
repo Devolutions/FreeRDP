@@ -5,6 +5,7 @@
 #include <freerdp/freerdp.h>
 #include <winpr/clipboard.h>
 #include <freerdp/client/cliprdr.h>
+#include <freerdp/client/disp.h>
 #include "virtualchannel.h"
 
 typedef void (*fnRegionUpdated)(void* rdp, int x, int y, int width, int height);
@@ -48,6 +49,9 @@ typedef struct csharp_context
 	VirtChanContext* rdpjump;
 	VirtChanContext* rdplog;
 	UINT32 clipboardCapabilities;
+	/* Dynamic resolution */
+	DispClientContext* disp;
+	UINT64 lastSentDate;
 } csContext;
 
 FREERDP_API BOOL csharp_configure_log_callback(int wlogLevel, wLogCallbackMessage_t fn);
@@ -69,6 +73,8 @@ FREERDP_API BOOL csharp_freerdp_set_connection_info(void* instance, const char* 
 FREERDP_API void csharp_freerdp_set_security_info(void* instance, BOOL useTLS, BOOL useNLA);
 FREERDP_API BOOL csharp_freerdp_set_gateway_settings(void* instance, const char* hostname, UINT32 port, const char* username, const char* password, const char* domain, BOOL bypassLocal, BOOL httpTransport, BOOL rpcTransport);
 FREERDP_API BOOL csharp_freerdp_set_data_directory(void* instance, const char* directory);
+FREERDP_API void csharp_freerdp_set_support_display_control(void* instance, BOOL supportDisplayControl);
+FREERDP_API BOOL csharp_freerdp_set_dynamic_resolution_update(void* instance, BOOL dynamicResolutionUpdate);
 FREERDP_API void csharp_freerdp_set_load_balance_info(void* instance, const char* info);
 FREERDP_API void csharp_freerdp_set_scale_factor(void* instance, UINT32 desktopScaleFactor, UINT32 deviceScaleFactor);
 FREERDP_API void csharp_freerdp_set_performance_flags(void* instance,
@@ -89,6 +95,7 @@ FREERDP_API void csharp_freerdp_send_clipboard_data(void* instance, BYTE* data, 
 FREERDP_API void csharp_freerdp_send_clipboard_text(void* instance, const char* text);
 FREERDP_API void csharp_freerdp_send_cursor_event(void* instance, int x, int y, int flags);
 FREERDP_API void csharp_freerdp_send_input(void* instance, int keycode, BOOL down);
+FREERDP_API BOOL csharp_freerdp_send_monitor_layout(void* instance, uint32_t targetWidth, uint32_t targetHeight);
 FREERDP_API void csharp_freerdp_send_unicode(void* instance, int character);
 FREERDP_API DWORD csharp_get_vk_from_keycode(DWORD keycode, DWORD flags);
 FREERDP_API DWORD csharp_get_scancode_from_vk(DWORD keycode, DWORD flags);
@@ -96,7 +103,7 @@ FREERDP_API void csharp_freerdp_send_vkcode(void* instance, int vkcode, BOOL dow
 FREERDP_API void csharp_freerdp_send_scancode(void* instance, int flags, DWORD scancode);
 FREERDP_API void csharp_freerdp_set_hyperv_info(void* instance, char* pcb);
 FREERDP_API void csharp_freerdp_set_keyboard_layout(void* instance, int layoutID);
-FREERDP_API void csharp_freerdp_set_smart_sizing(void* instance, BOOL smartSizing);
+FREERDP_API BOOL csharp_freerdp_set_smart_sizing(void* instance, BOOL smartSizing);
 FREERDP_API void csharp_freerdp_sync_toggle_keys(void* instance);
 FREERDP_API BOOL csharp_freerdp_input_send_focus_in_event(void* instance, uint16_t toggleStates);
 FREERDP_API BOOL csharp_freerdp_input_send_synchronize_event(void* instance, uint32_t flags);
