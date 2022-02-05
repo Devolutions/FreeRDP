@@ -242,7 +242,7 @@ static BOOL cs_context_new(freerdp* instance, rdpContext* context)
 	instance->PostDisconnect = cs_post_disconnect;
 	instance->Authenticate = cs_authenticate;
 	instance->GatewayAuthenticate = cs_gw_authenticate;
-	instance->VerifyCertificate = cs_verify_certificate;
+	instance->VerifyCertificateEx = cs_verify_certificate;
 	instance->VerifyX509Certificate = cs_verify_x509_certificate;
 
 	// context->channels = freerdp_channels_new(instance);
@@ -535,7 +535,7 @@ BOOL csharp_configure_log_callback(int wlogLevel, wLogCallbackMessage_t fn)
 	if (!WLog_ConfigureAppender(appender, "callbacks", (void*) &callbacks))
 		return FALSE;
 
-	return WLog_Init();
+	return TRUE;
 }
 
 BOOL csharp_configure_log_file(int wlogLevel, const char* logPath, const char* logName)
@@ -559,7 +559,7 @@ BOOL csharp_configure_log_file(int wlogLevel, const char* logPath, const char* l
 	if (!WLog_ConfigureAppender(appender, "outputfilepath", (void*) logPath))
 		return FALSE;
 
-	return WLog_Init();
+	return TRUE;
 }
 
 BOOL cs_client_global_init()
@@ -1301,11 +1301,11 @@ void csharp_set_on_gateway_authenticate(void* instance, fnOnAuthenticate fn)
 	ctxt->onGwAuthenticate = fn;
 }
 
-void csharp_set_on_verify_certificate(void* instance, pVerifyCertificate fn)
+void csharp_set_on_verify_certificate(void* instance, pVerifyCertificateEx fn)
 {
 	freerdp* inst = (freerdp*)instance;
 	
-	inst->VerifyCertificate = fn;
+	inst->VerifyCertificateEx = fn;
 }
 
 void csharp_set_on_verify_x509_certificate(void* instance, pVerifyX509Certificate fn)
