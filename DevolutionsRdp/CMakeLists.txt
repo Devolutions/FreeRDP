@@ -27,8 +27,6 @@ set(${MODULE_PREFIX}_SOURCES
 
 set(${MODULE_PREFIX}_RESOURCES "")
 
-add_definitions(-DWITH_WINPR_DEPRECATED)
-
 if(WIN32)
 	include(WindowsRC)
 
