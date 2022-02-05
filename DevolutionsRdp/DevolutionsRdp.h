@@ -110,7 +110,7 @@ FREERDP_API BOOL csharp_freerdp_input_send_synchronize_event(void* instance, uin
 FREERDP_API void csharp_set_on_authenticate(void* instance, fnOnAuthenticate fn);
 FREERDP_API void csharp_set_on_clipboard_update(void* instance, fnOnClipboardUpdate fn);
 FREERDP_API void csharp_set_on_gateway_authenticate(void* instance, fnOnAuthenticate fn);
-FREERDP_API void csharp_set_on_verify_certificate(void* instance, pVerifyCertificate fn);
+FREERDP_API void csharp_set_on_verify_certificate(void* instance, pVerifyCertificateEx fn);
 FREERDP_API void csharp_set_on_verify_x509_certificate(void* instance, pVerifyX509Certificate fn);
 FREERDP_API void csharp_set_on_error(void* instance, fnOnError fn);
 FREERDP_API void csharp_set_on_cursor_notifications(void* instance, fnOnNewCursor newCursor, fnOnFreeCursor freeCursor, fnOnSetCursor setCursor, fnOnDefaultCursor defaultCursor);
