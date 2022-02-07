@@ -116,6 +116,7 @@ FREERDP_API void csharp_set_on_error(void* instance, fnOnError fn);
 FREERDP_API void csharp_set_on_cursor_notifications(void* instance, fnOnNewCursor newCursor, fnOnFreeCursor freeCursor, fnOnSetCursor setCursor, fnOnDefaultCursor defaultCursor);
 FREERDP_API const char* csharp_get_error_info_string(int code);
 FREERDP_API int csharp_get_last_error(void* instance);
+FREERDP_API void csharp_print_message(const char* tag, int level, uint32_t line, const char* file, const char* function, const char* message);
 
 FREERDP_API void csharp_freerdp_redirect_drive(void* instance, char* name, char* path);
 FREERDP_API void csharp_freerdp_set_redirect_all_drives(void* instance, BOOL redirect);
