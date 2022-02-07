@@ -1347,6 +1347,15 @@ int csharp_get_last_error(void* instance)
 	return freerdp_get_last_error(ctx);
 }
 
+void csharp_print_message(const char* tag, int level, uint32_t line, 
+  const char* file, const char* function, const char* message)
+{
+	wLog* log = WLog_Get(tag);
+
+	if (log && level >= (int) WLog_GetLogLevel(log))
+		WLog_PrintMessage(log, WLOG_MESSAGE_TEXT, level, line, file, function, "%s", message);
+}
+
 DWORD csharp_get_vk_from_keycode(DWORD keycode, DWORD flags)
 {
 	return GetVirtualKeyCodeFromKeycode(keycode, flags);
