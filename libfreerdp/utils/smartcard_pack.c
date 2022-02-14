@@ -365,10 +365,13 @@ static char* smartcard_convert_string_list(const void* in, size_t bytes, BOOL un
 		mszA[length - 1] = '\0';
 	}
 
-	for (index = 0; index < length - 1; index++)
+    if (length > 0)
 	{
-		if (mszA[index] == '\0')
-			mszA[index] = ',';
+		for (index = 0; index < length - 1; index++)
+		{
+			if (mszA[index] == '\0')
+				mszA[index] = ',';
+		}
 	}
 
 	return mszA;
