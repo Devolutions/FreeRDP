@@ -16,7 +16,11 @@ typedef void (*fnOnNewCursor)(void* context, void* pointer, BYTE* data, UINT32 x
 typedef BYTE* (*fnOnFreeCursor)(void* context, void* pointer);
 typedef void (*fnOnSetCursor)(void* context, void* pointer);
 typedef void (*fnOnDefaultCursor)(void* context);
-typedef BOOL (*fnOnAuthenticate)(void* context, char* pszUsername, int cchUsername, char* pszPassword, int cchPassword, char* pszDoman, int cchDomain);
+typedef BOOL (*fnOnAuthenticate)(void* context, 
+	char* pszUsername, int cchUsername, 
+	char* pszPassword, int cchPassword, 
+	char* pszDoman, int cchDomain,
+	rdp_auth_reason reason);
 
 typedef struct csharp_context
 {
