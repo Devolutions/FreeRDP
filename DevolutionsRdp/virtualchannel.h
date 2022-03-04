@@ -29,7 +29,7 @@ typedef struct virtchan_plugin
 	rdpContext* rdpcontext;
 } virtchanPlugin;
 
-PVIRTUALCHANNELENTRY cs_channels_load_static_addin_entry(LPCSTR pszName, LPSTR pszSubsystem, LPSTR pszType, DWORD dwFlags);
+PVIRTUALCHANNELENTRY cs_channels_load_static_addin_entry(LPCSTR pszName, LPCSTR pszSubsystem, LPCSTR pszType, DWORD dwFlags);
 UINT cs_channel_write(VirtChanContext* context, BSTR message, int size);
 char* cs_channel_get_name(VirtChanContext* context);
 void cs_channel_set_on_received_data(VirtChanContext* context, fnOnChannelReceivedData fn);

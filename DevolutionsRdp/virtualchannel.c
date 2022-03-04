@@ -284,7 +284,7 @@ BOOL VCAPITYPE rdpvirt_log_VirtualChannelEntryEx(PCHANNEL_ENTRY_POINTS pEntryPoi
 	return rdpvirt_VirtualChannelEntryEx(pEntryPoints, pInitHandle, "RDMLog");
 }
 
-PVIRTUALCHANNELENTRY cs_channels_load_static_addin_entry(LPCSTR pszName, LPSTR pszSubsystem, LPSTR pszType, DWORD dwFlags)
+PVIRTUALCHANNELENTRY cs_channels_load_static_addin_entry(LPCSTR pszName, LPCSTR pszSubsystem, LPCSTR pszType, DWORD dwFlags)
 {
 	PVIRTUALCHANNELENTRY entry = NULL;
 
