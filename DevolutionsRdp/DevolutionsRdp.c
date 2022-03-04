@@ -32,8 +32,7 @@
 static BOOL cs_pre_connect(freerdp* instance);
 static BOOL cs_post_connect(freerdp* instance);
 static void cs_post_disconnect(freerdp* instance);
-static BOOL cs_authenticate(freerdp* instance, char** username, char** password, char** domain);
-static BOOL cs_gw_authenticate(freerdp* instance, char** username, char** password, char** domain);
+static BOOL cs_authenticate(freerdp* instance, char** username, char** password, char** domain, rdp_auth_reason reason);
 static DWORD cs_verify_certificate(freerdp* instance, const char* host, UINT16 port,
                                    const char* common_name, const char* subject, const char* issuer,
                                    const char* fingerprint, DWORD flags);
@@ -244,8 +243,7 @@ static BOOL cs_context_new(freerdp* instance, rdpContext* context)
 	instance->PreConnect = cs_pre_connect;
 	instance->PostConnect = cs_post_connect;
 	instance->PostDisconnect = cs_post_disconnect;
-	instance->Authenticate = cs_authenticate;
-	instance->GatewayAuthenticate = cs_gw_authenticate;
+	instance->AuthenticateEx = cs_authenticate;
 	instance->VerifyCertificateEx = cs_verify_certificate;
 	instance->VerifyX509Certificate = cs_verify_x509_certificate;
 
@@ -439,61 +437,68 @@ static void cs_post_disconnect(freerdp* instance)
 	gdi_free(instance);
 }
 
-static BOOL cs_do_authenticate(freerdp* instance, char** username, char** password, char** domain, fnOnAuthenticate callback, BOOL result)
+static BOOL cs_do_authenticate(freerdp* instance, char** username, char** password, char** domain, rdp_auth_reason reason)
 {
 	csContext* context = (csContext*)instance->context;
+	BOOL result = TRUE;
+	fnOnAuthenticate callback = context->onAuthenticate;
 
-	if (callback)
+	if (reason > AUTH_RDP)
 	{
+		callback = context->onGwAuthenticate;
 		result = FALSE;
-		char pszUsername[CRED_MAX_USERNAME_LENGTH + 1];
-		char pszPassword[(CRED_MAX_CREDENTIAL_BLOB_SIZE / 2) + 1];
-		char pszDomain[CRED_MAX_DOMAIN_TARGET_NAME_LENGTH + 1];
-
-		ZeroMemory(pszUsername, sizeof(pszUsername));
-
-		if (*username)
-			strncpy(pszUsername, *username, sizeof(pszUsername) - 1);
-
-		ZeroMemory(pszPassword, sizeof(pszPassword));
-		
-		if (*password)
-			strncpy(pszPassword, *password, sizeof(pszPassword) - 1);
-
-		ZeroMemory(pszDomain, sizeof(pszDomain));
-		
-		if (*domain)
-			strncpy(pszDomain, *domain, sizeof(pszDomain) - 1);
-		
-		result = callback(instance, pszUsername, (int)sizeof(pszUsername), 
-		  pszPassword, (int)sizeof(pszPassword), pszDomain, (int)sizeof(pszDomain));
-		
-		if (result)
-		{
-			free(*username);
-			*username = _strdup(pszUsername);
-
-			free(*password);
-			*password = _strdup(pszPassword);
-			
-			free(*domain);
-			*domain = _strdup(pszDomain);
-		}
 	}
+
+	if (!callback)
+	{
+		goto out;
+	}
+
+	char pszUsername[CRED_MAX_USERNAME_LENGTH + 1];
+	char pszPassword[(CRED_MAX_CREDENTIAL_BLOB_SIZE / 2) + 1];
+	char pszDomain[CRED_MAX_DOMAIN_TARGET_NAME_LENGTH + 1];
+
+	ZeroMemory(pszUsername, sizeof(pszUsername));
+
+	if (*username)
+		strncpy(pszUsername, *username, sizeof(pszUsername) - 1);
+
+	ZeroMemory(pszPassword, sizeof(pszPassword));
 		
+	if (*password)
+		strncpy(pszPassword, *password, sizeof(pszPassword) - 1);
+
+	ZeroMemory(pszDomain, sizeof(pszDomain));
+		
+	if (*domain)
+		strncpy(pszDomain, *domain, sizeof(pszDomain) - 1);
+		
+	result = callback(instance, 
+		pszUsername, (int)sizeof(pszUsername), 
+		pszPassword, (int)sizeof(pszPassword), 
+		pszDomain, (int)sizeof(pszDomain),
+		reason);
+		
+	if (result)
+	{
+		free(*username);
+		*username = _strdup(pszUsername);
+
+		free(*password);
+		*password = _strdup(pszPassword);
+			
+		free(*domain);
+		*domain = _strdup(pszDomain);
+	}
+
+out:
 	return result;
 }
 
-static BOOL cs_authenticate(freerdp* instance, char** username, char** password, char** domain)
+static BOOL cs_authenticate(freerdp* instance, char** username, char** password, char** domain, rdp_auth_reason reason)
 {
 	csContext* context = (csContext*)instance->context;
-	return cs_do_authenticate(instance, username, password, domain, context->onAuthenticate, TRUE);
-}
-
-static BOOL cs_gw_authenticate(freerdp* instance, char** username, char** password, char** domain)
-{
-	csContext* context = (csContext*)instance->context;
-	return cs_do_authenticate(instance, username, password, domain, context->onGwAuthenticate, FALSE);
+	return cs_do_authenticate(instance, username, password, domain, reason);
 }
 
 static DWORD cs_verify_certificate(freerdp* instance, const char* host, UINT16 port,
