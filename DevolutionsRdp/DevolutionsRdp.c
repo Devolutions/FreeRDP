@@ -20,10 +20,12 @@
 
 #define TAG "DevolutionsRdp"
 
+#ifndef _WIN32
 // Credentials module was removed from winpr
 #define CRED_MAX_USERNAME_LENGTH (256 + 1 + 256)
 #define CRED_MAX_DOMAIN_TARGET_NAME_LENGTH (256 + 1 + 80)
 #define CRED_MAX_CREDENTIAL_BLOB_SIZE 512
+#endif
 
 #define RESIZE_MIN_DELAY 200 /* minimum delay in ms between two resizes */
 
@@ -32,12 +34,14 @@ static BOOL cs_post_connect(freerdp* instance);
 static void cs_post_disconnect(freerdp* instance);
 static BOOL cs_authenticate(freerdp* instance, char** username, char** password, char** domain);
 static BOOL cs_gw_authenticate(freerdp* instance, char** username, char** password, char** domain);
-static DWORD cs_verify_certificate(freerdp* instance, const char* common_name, const char* subject, const char* issuer, const char* fingerprint, BOOL host_mismatch);
+static DWORD cs_verify_certificate(freerdp* instance, const char* host, UINT16 port,
+                                   const char* common_name, const char* subject, const char* issuer,
+                                   const char* fingerprint, DWORD flags);
 static int cs_verify_x509_certificate(freerdp* instance, const BYTE* data, size_t length, const char* hostname, uint16_t port, DWORD flags);
 static char** freerdp_command_line_parse_comma_separated_values_offset(const char* name, char* list, size_t* count);
 static char** freerdp_command_line_parse_comma_separated_values_ex(const char* name, const char* list, size_t* count);
-void cs_error_info(void* ctx, ErrorInfoEventArgs* e);
-BOOL cs_client_global_init();
+void cs_error_info(void* ctx, const ErrorInfoEventArgs* e);
+BOOL cs_client_global_init(void);
 
 static int cs_get_vk_code(int character)
 {
@@ -492,7 +496,9 @@ static BOOL cs_gw_authenticate(freerdp* instance, char** username, char** passwo
 	return cs_do_authenticate(instance, username, password, domain, context->onGwAuthenticate, FALSE);
 }
 
-static DWORD cs_verify_certificate(freerdp* instance, const char* common_name, const char* subject, const char* issuer, const char* fingerprint, BOOL host_mismatch)
+static DWORD cs_verify_certificate(freerdp* instance, const char* host, UINT16 port,
+	const char* common_name, const char* subject, 
+	const char* issuer, const char* fingerprint, DWORD flags)
 {
 	return TRUE;
 }
@@ -502,7 +508,7 @@ static int cs_verify_x509_certificate(freerdp* instance, const BYTE* data, size_
 	return 1;
 }
 
-void cs_error_info(void* ctx, ErrorInfoEventArgs* e)
+void cs_error_info(void* ctx, const ErrorInfoEventArgs* e)
 {
 	rdpContext* context = (rdpContext*) ctx;
 	csContext* csc = (csContext*)context->instance->context;
@@ -562,17 +568,22 @@ BOOL csharp_configure_log_file(int wlogLevel, const char* logPath, const char* l
 	return TRUE;
 }
 
-BOOL cs_client_global_init()
+BOOL cs_client_global_init(void)
 {
+	BOOL result = TRUE;
+
 #ifdef WIN32
 	WSADATA wsaData;
-	WSAStartup(MAKEWORD(2, 2), &wsaData);
+	if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
+	{
+		result = FALSE;
+	}
 #endif
 
-	return TRUE;
+	return result;
 }
 
-void csharp_freerdp_client_global_uninit()
+void csharp_freerdp_client_global_uninit(void)
 {
 #ifdef WIN32
 	WSACleanup();
@@ -773,10 +784,10 @@ BOOL csharp_freerdp_set_gateway_settings(void* instance, const char* hostname, U
 	settings->GatewayPort = port;
 	settings->GatewayEnabled = TRUE;
 	settings->GatewayUseSameCredentials = FALSE;
-	settings->GatewayHostname = strdup(hostname);
-	settings->GatewayUsername = strdup(username);
-	settings->GatewayPassword = strdup(password);
-	settings->GatewayDomain = strdup(domain);
+	settings->GatewayHostname = _strdup(hostname);
+	settings->GatewayUsername = _strdup(username);
+	settings->GatewayPassword = _strdup(password);
+	settings->GatewayDomain = _strdup(domain);
 	settings->GatewayBypassLocal = bypassLocal;
 	settings->GatewayHttpTransport = httpTransport;
 	settings->GatewayRpcTransport = rpcTransport;
@@ -798,7 +809,7 @@ BOOL csharp_freerdp_set_client_hostname(void* instance, const char* clientHostna
 	freerdp* inst = (freerdp*)instance;
 	rdpSettings* settings = inst->settings;
 	
-	if (!(settings->ClientHostname = strdup(clientHostname)))
+	if (!(settings->ClientHostname = _strdup(clientHostname)))
 		return FALSE;
 
 	return TRUE;
@@ -870,24 +881,24 @@ BOOL csharp_freerdp_set_connection_info(void* instance, const char* hostname, co
 	if (color_depth <= 16)
 		settings->DesktopWidth &= (~1);
 
-	if (!(settings->ServerHostname = strdup(hostname)))
+	if (!(settings->ServerHostname = _strdup(hostname)))
 		goto out_fail_strdup;
 
 	if (username && strlen(username) > 0)
 	{
-		if (!(settings->Username = strdup(username)))
+		if (!(settings->Username = _strdup(username)))
 			goto out_fail_strdup;
 	}
 
 	if (password && strlen(password) > 0)
 	{
-		if (!(settings->Password = strdup(password)))
+		if (!(settings->Password = _strdup(password)))
 			goto out_fail_strdup;
 
 		settings->AutoLogonEnabled = TRUE;
 	}
 
-	if (!(settings->Domain = strdup(domain)))
+	if (!(settings->Domain = _strdup(domain)))
 		goto out_fail_strdup;
 
 	settings->SoftwareGdi = TRUE;
@@ -991,14 +1002,14 @@ BOOL csharp_freerdp_set_data_directory(void* instance, const char* directory)
 
 	settings->HomePath = settings->ConfigPath = NULL;
 
-	int config_dir_len = strlen(directory) + 10; /* +9 chars for /.freerdp and +1 for \0 */
+	int config_dir_len = (int) strlen(directory) + 10; /* +9 chars for /.freerdp and +1 for \0 */
 	char* config_dir_buf = (char*)malloc(config_dir_len);
 	if (!config_dir_buf)
 		goto out_malloc_fail;
 
 	strcpy(config_dir_buf, directory);
 	strcat(config_dir_buf, "/.freerdp");
-	settings->HomePath = strdup(directory);
+	settings->HomePath = _strdup(directory);
 	if (!settings->HomePath)
 		goto out_strdup_fail;
 	settings->ConfigPath = config_dir_buf;	/* will be freed by freerdp library */
@@ -1229,7 +1240,7 @@ void csharp_freerdp_send_clipboard_text(void* instance, const char* text)
 	if (len)
 	{
 		formatId = ClipboardRegisterFormat(ctxt->clipboard, "UTF8_STRING");
-		ClipboardSetData(ctxt->clipboard, formatId, (void*) text, len + 1);
+		ClipboardSetData(ctxt->clipboard, formatId, (void*) text, (UINT32) len + 1);
 	}
 	else
 	{
@@ -1480,7 +1491,7 @@ FREERDP_API void csharp_freerdp_create_virtual_channels(void* instance, const ch
 	size_t count;
 	rdpSettings* settings = ((freerdp*)instance)->settings;
 
- 	r = strdup(channelNames);
+ 	r = _strdup(channelNames);
 
 	if(!r)
 		return;
