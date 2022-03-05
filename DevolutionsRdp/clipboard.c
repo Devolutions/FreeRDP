@@ -12,6 +12,8 @@
 
 #include "clipboard.h"
 
+#define TAG CLIENT_TAG("cs")
+
 int cs_cliprdr_send_client_format_list(CliprdrClientContext* cliprdr)
 {
 	UINT32 index;
@@ -273,6 +275,7 @@ UINT cs_cliprdr_server_format_data_request(CliprdrClientContext* cliprdr, const 
  */
 UINT cs_cliprdr_server_format_data_response(CliprdrClientContext* cliprdr, const CLIPRDR_FORMAT_DATA_RESPONSE* formatDataResponse)
 {
+	UINT rc = CHANNEL_RC_OK;
 	BYTE* data;
 	UINT32 size;
 	UINT32 index;
@@ -280,6 +283,13 @@ UINT cs_cliprdr_server_format_data_response(CliprdrClientContext* cliprdr, const
 	CLIPRDR_FORMAT* format = NULL;
 	csContext* ctx = (csContext*) cliprdr->custom;
 	freerdp* instance = ((rdpContext*) ctx)->instance;
+
+	if (formatDataResponse->msgFlags == CB_RESPONSE_FAIL)
+	{
+		WLog_WARN(TAG, "Format Data Response PDU msgFlags is CB_RESPONSE_FAIL");
+		SetEvent(ctx->clipboardRequestEvent);
+		goto out;
+	}
 
 	for (index = 0; index < ctx->numServerFormats; index++)
 	{
@@ -289,8 +299,9 @@ UINT cs_cliprdr_server_format_data_response(CliprdrClientContext* cliprdr, const
 
 	if (!format)
 	{
+		WLog_WARN(TAG, "Format Data Response requested format not in serverFormats");
 		SetEvent(ctx->clipboardRequestEvent);
-		return ERROR_INTERNAL_ERROR;
+		goto out;
 	}
 
 	if (format->formatName)
@@ -299,7 +310,7 @@ UINT cs_cliprdr_server_format_data_response(CliprdrClientContext* cliprdr, const
 		formatId = format->formatId;
 
 	size = formatDataResponse->dataLen;
-	data = (BYTE*) malloc(size);
+	data = (BYTE*)malloc(size);
 	CopyMemory(data, formatDataResponse->requestedFormatData, size);
 
 	ClipboardSetData(ctx->clipboard, formatId, data, size);
@@ -312,7 +323,8 @@ UINT cs_cliprdr_server_format_data_response(CliprdrClientContext* cliprdr, const
 	if(ctx->onClipboardUpdate)
 		ctx->onClipboardUpdate(instance, data, size);
 
-	return CHANNEL_RC_OK;
+out:
+	return rc;
 }
 
 /**
