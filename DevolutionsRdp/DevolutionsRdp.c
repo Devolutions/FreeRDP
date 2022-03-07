@@ -735,26 +735,21 @@ BOOL csharp_freerdp_disconnect(void* instance)
 	csContext* context = (csContext*)inst->context;
 	rdpSettings* settings = inst->settings;
 
-	freerdp_disconnect(inst);
-
-	if (freerdp_client_stop(inst->context) != CHANNEL_RC_OK)
-		return FALSE;
-
 	if (settings->AsyncInput && context->inputThread)
+	{
+		wMessageQueue* inputQueue = freerdp_get_message_queue(instance,
+									FREERDP_INPUT_MESSAGE_QUEUE);
+
+		if (inputQueue)
 		{
-			wMessageQueue* inputQueue = freerdp_get_message_queue(instance,
-										FREERDP_INPUT_MESSAGE_QUEUE);
-
-			if (inputQueue)
-			{
-				MessageQueue_PostQuit(inputQueue, 0);
-				WaitForSingleObject(context->inputThread, INFINITE);
-			}
-
-			CloseHandle(context->inputThread);
+			MessageQueue_PostQuit(inputQueue, 0);
+			WaitForSingleObject(context->inputThread, INFINITE);
 		}
 
-	return TRUE;
+		CloseHandle(context->inputThread);
+	}
+
+	return 	freerdp_disconnect(inst);;
 }
 
 void csharp_freerdp_set_initial_buffer(void* instance, void* buffer)
