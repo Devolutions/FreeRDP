@@ -27,7 +27,6 @@ typedef struct csharp_context
 	rdpContext _p;
 
 	void* buffer;
-	HANDLE inputThread;
 	
 	fnRegionUpdated regionUpdated;
 	fnDesktopSizeChanged desktopSizeChanged;
