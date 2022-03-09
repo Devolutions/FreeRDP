@@ -8,6 +8,8 @@
 #include <freerdp/client/disp.h>
 #include "virtualchannel.h"
 
+typedef BOOL (*fnChannelConnected)(void* context, const char* name, void* interface);
+typedef BOOL (*fnChannelDisconnected)(void* context, const char* name, void* interface);
 typedef void (*fnRegionUpdated)(void* rdp, int x, int y, int width, int height);
 typedef void* (*fnDesktopSizeChanged)(void* rdp, int width, int height);
 typedef void (*fnOnError)(void* context, int code);
@@ -28,6 +30,8 @@ typedef struct csharp_context
 
 	void* buffer;
 	
+	fnChannelConnected channelConnected;
+	fnChannelDisconnected channelDisconnected;
 	fnRegionUpdated regionUpdated;
 	fnDesktopSizeChanged desktopSizeChanged;
 	fnOnClipboardUpdate onClipboardUpdate;
@@ -38,20 +42,19 @@ typedef struct csharp_context
 	fnOnError onError;
 	fnOnAuthenticate onAuthenticate;
 	fnOnAuthenticate onGwAuthenticate;
-
 	fnOnChannelReceivedData onChannelReceivedData;
 
-	BOOL clipboardSync;
+    /* Legacy clipboard */
 	wClipboard* clipboard;
 	UINT32 numServerFormats;
 	UINT32 requestedFormatId;
 	HANDLE clipboardRequestEvent;
 	CLIPRDR_FORMAT* serverFormats;
 	CliprdrClientContext* cliprdr;
+	/* Virtual channels */
 	VirtChanContext* rdpcmd;
 	VirtChanContext* rdpjump;
 	VirtChanContext* rdplog;
-	UINT32 clipboardCapabilities;
 	/* Dynamic resolution */
 	DispClientContext* disp;
 	UINT64 lastSentDate;
@@ -67,6 +70,8 @@ FREERDP_API BOOL csharp_freerdp_disconnect(void* instance);
 FREERDP_API void csharp_freerdp_set_alternate_shell(void* instance, const char* shell);
 FREERDP_API void csharp_freerdp_set_shell_working_directory(void* instance, const char* directory);
 FREERDP_API void csharp_freerdp_set_initial_buffer(void* instance, void* buffer);
+FREERDP_API void csharp_freerdp_set_on_channel_connected(void* instance, fnChannelConnected fn);
+FREERDP_API void csharp_freerdp_set_on_channel_disconnected(void* instance, fnChannelDisconnected fn);
 FREERDP_API void csharp_freerdp_set_on_region_updated(void* instance, fnRegionUpdated fn);
 FREERDP_API void csharp_freerdp_set_on_desktop_size_changed(void* instance, fnDesktopSizeChanged fn);
 FREERDP_API BOOL csharp_freerdp_set_client_hostname(void* instance, const char* clientHostname);
@@ -120,6 +125,7 @@ FREERDP_API void csharp_set_on_cursor_notifications(void* instance, fnOnNewCurso
 FREERDP_API const char* csharp_get_error_info_string(int code);
 FREERDP_API int csharp_get_last_error(void* instance);
 FREERDP_API void csharp_print_message(const char* tag, int level, uint32_t line, const char* file, const char* function, const char* message);
+FREERDP_API void csharp_deallocate(void* ptr);
 
 FREERDP_API void csharp_freerdp_redirect_drive(void* instance, char* name, char* path);
 FREERDP_API void csharp_freerdp_set_redirect_all_drives(void* instance, BOOL redirect);
