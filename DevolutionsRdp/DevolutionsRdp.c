@@ -17,6 +17,7 @@
 #include "DevolutionsRdp.h"
 #include "clipboard.h"
 #include "cursor.h"
+#include "virtualchannel.h"
 
 #define TAG "DevolutionsRdp"
 
@@ -196,7 +197,11 @@ void cs_OnChannelConnectedEventHandler(rdpContext* context, ChannelConnectedEven
 {
 	csContext* csc = (csContext*)context->instance->context;
 
-	if (strcmp(e->name, RDPGFX_DVC_CHANNEL_NAME) == 0)
+	if (csc->channelConnected && csc->channelConnected(context, e->name, e->pInterface))
+	{
+		return;
+	}
+	else if (strcmp(e->name, RDPGFX_DVC_CHANNEL_NAME) == 0)
 	{
 		gdi_graphics_pipeline_init(context->gdi, (RdpgfxClientContext*) e->pInterface);
 	}
@@ -218,6 +223,10 @@ void cs_OnChannelDisconnectedEventHandler(rdpContext* context, ChannelDisconnect
 {
 	csContext* csc = (csContext*)context->instance->context;
 
+	if (csc->channelDisconnected && csc->channelDisconnected(context, e->name, e->pInterface))
+	{
+		return;
+	}
 	if (strcmp(e->name, RDPGFX_DVC_CHANNEL_NAME) == 0)
 	{
 		gdi_graphics_pipeline_uninit(context->gdi, (RdpgfxClientContext*) e->pInterface);
@@ -247,7 +256,6 @@ static BOOL cs_context_new(freerdp* instance, rdpContext* context)
 	instance->VerifyCertificateEx = cs_verify_certificate;
 	instance->VerifyX509Certificate = cs_verify_x509_certificate;
 
-	// context->channels = freerdp_channels_new(instance);
 	PubSub_SubscribeErrorInfo(context->pubSub, cs_error_info);
 
 	settings->AsyncUpdate = FALSE;
@@ -257,6 +265,7 @@ static BOOL cs_context_new(freerdp* instance, rdpContext* context)
 
 static void cs_context_free(freerdp* instance, rdpContext* context)
 {
+
 }
 
 static BOOL cs_pre_connect(freerdp* instance)
@@ -735,6 +744,22 @@ void csharp_freerdp_set_initial_buffer(void* instance, void* buffer)
 	csContext* ctxt = (csContext*)inst->context;
 
 	ctxt->buffer = buffer;
+}
+
+void csharp_freerdp_set_on_channel_connected(void* instance, fnChannelConnected fn)
+{
+	freerdp* inst = (freerdp*)instance;
+	csContext* csc = (csContext*)inst->context;
+	
+	csc->channelConnected = fn;
+}
+
+void csharp_freerdp_set_on_channel_disconnected(void* instance, fnChannelDisconnected fn)
+{
+	freerdp* inst = (freerdp*)instance;
+	csContext* csc = (csContext*)inst->context;
+	
+	csc->channelDisconnected = fn;
 }
 
 void csharp_freerdp_set_on_region_updated(void* instance, fnRegionUpdated fn)
@@ -1222,7 +1247,7 @@ void csharp_freerdp_send_clipboard_text(void* instance, const char* text)
 	freerdp* inst = (freerdp*)instance;
 	csContext* ctxt = (csContext*)inst->context;
 
-	if(!ctxt->clipboard)
+	if(!ctxt->cliprdr || !ctxt->clipboard)
 	{
 		WLog_ERR(TAG, "Clipboard not initialized yet");
 		return;
@@ -1253,7 +1278,7 @@ void csharp_freerdp_send_clipboard_data(void* instance, BYTE* buffer, int length
 	freerdp* inst = (freerdp*)instance;
 	csContext* ctxt = (csContext*)inst->context;
 
-	if(!ctxt->clipboard)
+	if(!ctxt->cliprdr || !ctxt->clipboard)
 	{
 		WLog_ERR(TAG, "Clipboard not initialized yet\n");
 		return; /* Clipboard not ready yet.*/
@@ -1359,6 +1384,12 @@ void csharp_print_message(const char* tag, int level, uint32_t line,
 
 	if (log && level >= (int) WLog_GetLogLevel(log))
 		WLog_PrintMessage(log, WLOG_MESSAGE_TEXT, level, line, file, function, "%s", message);
+}
+
+void csharp_deallocate(void* ptr)
+{
+	if (ptr)
+		free(ptr);
 }
 
 DWORD csharp_get_vk_from_keycode(DWORD keycode, DWORD flags)

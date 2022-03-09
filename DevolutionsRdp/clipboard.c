@@ -106,7 +106,6 @@ UINT cs_cliprdr_monitor_ready(CliprdrClientContext* cliprdr, const CLIPRDR_MONIT
 {
 	csContext* ctx = (csContext*) cliprdr->custom;
 
-	ctx->clipboardSync = TRUE;
 	cs_cliprdr_send_client_capabilities(cliprdr);
 	cs_cliprdr_send_client_format_list(cliprdr);
 
@@ -120,25 +119,6 @@ UINT cs_cliprdr_monitor_ready(CliprdrClientContext* cliprdr, const CLIPRDR_MONIT
  */
 UINT cs_cliprdr_server_capabilities(CliprdrClientContext* cliprdr, const CLIPRDR_CAPABILITIES* capabilities)
 {
-	UINT32 index;
-	CLIPRDR_CAPABILITY_SET* capabilitySet;
-	csContext* ctx = (csContext*) cliprdr->custom;
-
-	for (index = 0; index < capabilities->cCapabilitiesSets; index++)
-	{
-		capabilitySet = &(capabilities->capabilitySets[index]);
-
-		if ((capabilitySet->capabilitySetType == CB_CAPSTYPE_GENERAL) &&
-		    (capabilitySet->capabilitySetLength >= CB_CAPSTYPE_GENERAL_LEN))
-		{
-			CLIPRDR_GENERAL_CAPABILITY_SET* generalCapabilitySet
-			= (CLIPRDR_GENERAL_CAPABILITY_SET*) capabilitySet;
-
-			ctx->clipboardCapabilities = generalCapabilitySet->generalFlags;
-			break;
-		}
-	}
-
 	return CHANNEL_RC_OK;
 }
 
