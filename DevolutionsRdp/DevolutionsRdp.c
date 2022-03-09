@@ -251,7 +251,6 @@ static BOOL cs_context_new(freerdp* instance, rdpContext* context)
 	PubSub_SubscribeErrorInfo(context->pubSub, cs_error_info);
 
 	settings->AsyncUpdate = FALSE;
-	settings->AsyncInput = TRUE;
 
 	return TRUE;
 }
@@ -374,33 +373,29 @@ BOOL cs_desktop_resize(rdpContext* context)
 	return TRUE;
 }
 
-static DWORD WINAPI freerdp_csharp_input_thread(LPVOID param)
+void freerdp_csharp_input_cb(freerdp *instance)
 {
 	int status;
 	wMessage message;
-	wMessageQueue* queue;
-	rdpContext* context = (rdpContext*) param;
+	wMessageQueue *queue;
 	status = 1;
-	queue = freerdp_get_message_queue(context->instance,
-									  FREERDP_INPUT_MESSAGE_QUEUE);
+	queue = freerdp_get_message_queue(instance, FREERDP_INPUT_MESSAGE_QUEUE);
 
-	while (MessageQueue_Wait(queue))
+	if (queue)
 	{
 		while (MessageQueue_Peek(queue, &message, TRUE))
 		{
-			status = freerdp_message_queue_process_message(context->instance,
+			status = freerdp_message_queue_process_message(instance, 
 					 FREERDP_INPUT_MESSAGE_QUEUE, &message);
 
 			if (!status)
 				break;
 		}
-
-		if (!status)
-			break;
 	}
-
-	ExitThread(0);
-	return 0;
+	else
+	{
+		WLog_ERR(TAG, "freerdp_csharp_input_cb: No queue!");
+	}
 }
 
 static BOOL cs_post_connect(freerdp* instance)
@@ -426,8 +421,6 @@ static BOOL cs_post_connect(freerdp* instance)
 	
 	pointer_cache_register_callbacks(update);
 	cs_register_pointer((rdpContext*)context);
-
-	context->inputThread = CreateThread(NULL, 0, freerdp_csharp_input_thread, context, 0, NULL);
 
 	return TRUE;
 }
@@ -732,24 +725,8 @@ BOOL csharp_freerdp_connect(void* instance)
 BOOL csharp_freerdp_disconnect(void* instance)
 {
 	freerdp* inst = (freerdp*)instance;
-	csContext* context = (csContext*)inst->context;
-	rdpSettings* settings = inst->settings;
 
-	if (settings->AsyncInput && context->inputThread)
-	{
-		wMessageQueue* inputQueue = freerdp_get_message_queue(instance,
-									FREERDP_INPUT_MESSAGE_QUEUE);
-
-		if (inputQueue)
-		{
-			MessageQueue_PostQuit(inputQueue, 0);
-			WaitForSingleObject(context->inputThread, INFINITE);
-		}
-
-		CloseHandle(context->inputThread);
-	}
-
-	return 	freerdp_disconnect(inst);;
+	return freerdp_disconnect(inst);
 }
 
 void csharp_freerdp_set_initial_buffer(void* instance, void* buffer)
@@ -1076,19 +1053,36 @@ BOOL csharp_shall_disconnect(void* instance)
 BOOL csharp_waitforsingleobject(void* instance)
 {
 	freerdp* inst = (freerdp*)instance;
-	HANDLE handles[64];
-	DWORD nCount;
+	HANDLE handles[MAXIMUM_WAIT_OBJECTS] = { 0 };
+	HANDLE inputEvent;
+	DWORD nCount = 0;
 	DWORD status;
 
-	nCount = freerdp_get_event_handles(inst->context, &handles[0], 64);
+	if (!(inputEvent = freerdp_get_message_queue_event_handle(instance, FREERDP_INPUT_MESSAGE_QUEUE)))
+	{
+		WLog_ERR(TAG, "freerdp_get_message_queue_event_handle failed");
+		return FALSE;
+	}
+
+	handles[nCount++] = inputEvent;
+
+	nCount = freerdp_get_event_handles(inst->context, &handles[nCount], ARRAYSIZE(handles) - nCount);
 
 	if (nCount == 0)
+	{
+		WLog_ERR(TAG, "freerdp_get_event_handles failed");
 		return FALSE;
+	}
 
 	status = WaitForMultipleObjects(nCount, handles, FALSE, 100);
 
 	if (status == WAIT_FAILED)
 		return FALSE;
+
+	if (WaitForSingleObject(inputEvent, 0) == WAIT_OBJECT_0)
+	{
+		freerdp_csharp_input_cb(instance);
+	}
 
 	return TRUE;
 }
@@ -1387,7 +1381,7 @@ void csharp_freerdp_send_scancode(void* instance, int flags, DWORD scancode)
 void csharp_freerdp_redirect_drive(void* instance, char* name, char* path)
 {
 	freerdp* inst = (freerdp*)instance;
-	char* d[] = { "drive", name, path};
+	const char* d[] = { "drive", name, path};
 	
 	freerdp_client_add_device_channel(inst->settings, 3, d);
 }
