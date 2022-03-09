@@ -62,7 +62,7 @@ if(ANDROID)
 endif()
 
 if(WIN32)
-	target_link_libraries(${MODULE_NAME} winmm ntdsapi rpcrt4 dbghelp)
+	target_link_libraries(${MODULE_NAME} winmm ntdsapi rpcrt4 dbghelp ncrypt)
 endif()
 
 if(APPLE)

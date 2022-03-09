@@ -8,8 +8,8 @@
 #include <freerdp/client/disp.h>
 #include "virtualchannel.h"
 
-typedef BOOL (*fnChannelConnected)(void* context, const char* name, void* interface);
-typedef BOOL (*fnChannelDisconnected)(void* context, const char* name, void* interface);
+typedef BOOL (*fnChannelConnected)(void* context, const char* name, void* iface);
+typedef BOOL (*fnChannelDisconnected)(void* context, const char* name, void* iface);
 typedef void (*fnRegionUpdated)(void* rdp, int x, int y, int width, int height);
 typedef void* (*fnDesktopSizeChanged)(void* rdp, int width, int height);
 typedef void (*fnOnError)(void* context, int code);
