@@ -102,6 +102,7 @@ FREERDP_API BOOL csharp_check_event_handles(void* instance, void* buffer);
 FREERDP_API void csharp_freerdp_send_clipboard_data(void* instance, BYTE* data, int length);
 FREERDP_API void csharp_freerdp_send_clipboard_text(void* instance, const char* text);
 FREERDP_API void csharp_freerdp_send_cursor_event(void* instance, int x, int y, int flags);
+FREERDP_API void csharp_freerdp_send_cursor_event_ex(void* instance, int x, int y, int flags);
 FREERDP_API void csharp_freerdp_send_input(void* instance, int keycode, BOOL down);
 FREERDP_API BOOL csharp_freerdp_send_monitor_layout(void* instance, uint32_t targetWidth, uint32_t targetHeight);
 FREERDP_API void csharp_freerdp_send_unicode(void* instance, int character);
