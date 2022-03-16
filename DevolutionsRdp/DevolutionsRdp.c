@@ -1240,6 +1240,11 @@ void csharp_freerdp_send_cursor_event(void* instance, int x, int y, int flags)
 	freerdp_input_send_mouse_event(((freerdp*)instance)->input, flags, x, y);
 }
 
+void csharp_freerdp_send_cursor_event_ex(void* instance, int x, int y, int flags)
+{
+	freerdp_input_send_extended_mouse_event(((freerdp*)instance)->input, flags, x, y);
+}
+
 void csharp_freerdp_send_clipboard_text(void* instance, const char* text)
 {
 	size_t len = 0;
