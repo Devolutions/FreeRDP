@@ -67,6 +67,7 @@ FREERDP_API void* csharp_freerdp_new(void);
 FREERDP_API void csharp_freerdp_free(void* instance);
 FREERDP_API BOOL csharp_freerdp_connect(void* instance);
 FREERDP_API BOOL csharp_freerdp_disconnect(void* instance);
+FREERDP_API BOOL csharp_freerdp_abort_connect(void* instance);
 FREERDP_API void csharp_freerdp_set_alternate_shell(void* instance, const char* shell);
 FREERDP_API void csharp_freerdp_set_shell_working_directory(void* instance, const char* directory);
 FREERDP_API void csharp_freerdp_set_initial_buffer(void* instance, void* buffer);
