@@ -738,6 +738,13 @@ BOOL csharp_freerdp_disconnect(void* instance)
 	return freerdp_disconnect(inst);
 }
 
+BOOL csharp_freerdp_abort_connect(void* instance)
+{
+	freerdp* inst = (freerdp*)instance;
+
+	return freerdp_abort_connect(inst);
+}
+
 void csharp_freerdp_set_initial_buffer(void* instance, void* buffer)
 {
 	freerdp* inst = (freerdp*)instance;
