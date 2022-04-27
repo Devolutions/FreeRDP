@@ -29,6 +29,10 @@ if (UNIX AND NOT ANDROID)
   pkg_check_modules(_OPENSSL QUIET openssl)
 endif (UNIX AND NOT ANDROID)
 
+if(OPENSSL_ROOT_DIR)
+    list(PREPEND CMAKE_FIND_ROOT_PATH "${OPENSSL_ROOT_DIR}")
+endif()
+
 # http://www.slproweb.com/products/Win32OpenSSL.html
 SET(_OPENSSL_ROOT_HINTS
   $ENV{OPENSSL_ROOT_DIR}
@@ -234,6 +238,7 @@ ELSE(WIN32 AND NOT CYGWIN)
 
   FIND_LIBRARY(OPENSSL_SSL_LIBRARY
     NAMES
+      libssl.a
       ssl
       ssleay32
       libssl-1_1
@@ -247,6 +252,7 @@ ELSE(WIN32 AND NOT CYGWIN)
 
   FIND_LIBRARY(OPENSSL_CRYPTO_LIBRARY
     NAMES
+      libcrypto.a
       crypto
       libcrypto-1_1
     HINTS
