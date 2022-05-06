@@ -90,6 +90,8 @@ BOOL ShouldUseNativeSspi(void)
 		status = TRUE;
 
 	free(env);
+#else
+	status = TRUE;
 #endif
 	return status;
 }
@@ -100,10 +102,19 @@ BOOL InitializeSspiModule_Native(void)
 {
 	INIT_SECURITY_INTERFACE_W pInitSecurityInterfaceW;
 	INIT_SECURITY_INTERFACE_A pInitSecurityInterfaceA;
-	g_SspiModule = LoadLibraryA("secur32.dll");
+#ifdef _WIN32
+	g_SspiModule = LoadLibraryA("csspi.dll");
 
 	if (!g_SspiModule)
-		g_SspiModule = LoadLibraryA("security.dll");
+	{
+		g_SspiModule = LoadLibraryA("secur32.dll");
+
+		if (!g_SspiModule)
+			g_SspiModule = LoadLibraryA("security.dll");
+	}
+#else
+	g_SspiModule = LoadLibraryA("libcsspi.so");
+#endif
 
 	if (!g_SspiModule)
 		return FALSE;
