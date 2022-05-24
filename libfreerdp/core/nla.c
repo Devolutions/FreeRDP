@@ -991,7 +991,10 @@ static int nla_client_init(rdpNla* nla)
 #endif
 
 	if (!nla_sspi_module_init(nla))
+	{
+		WLog_ERR(TAG, "Failed to initialize SSPI module");
 		return -1;
+	}
 
 	nla->status = nla_update_package_name(nla);
 	if (nla->status != SEC_E_OK)
@@ -1325,7 +1328,10 @@ static int nla_server_init(rdpNla* nla)
 	}
 
 	if (!nla_sspi_module_init(nla))
+	{
+		WLog_ERR(TAG, "Failed to initialize SSPI module");
 		return -1;
+	}
 
 	if (!nla_setup_kerberos(nla))
 		return -1;
@@ -2712,7 +2718,12 @@ BOOL nla_set_sspi_module(rdpNla* nla, const char* sspiModule)
 	if (!sspiModule)
 		return TRUE;
 
+#ifdef UNICODE
+	ConvertToUnicode(CP_UTF8, 0, sspiModule, -1, &nla->SspiModule, 0);
+#else
 	nla->SspiModule = _strdup(sspiModule);
+#endif
+
 	if (!nla->SspiModule)
 		return FALSE;
 
