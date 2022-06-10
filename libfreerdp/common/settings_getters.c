@@ -2556,6 +2556,9 @@ const char* freerdp_settings_get_string(const rdpSettings* settings, size_t id)
 		case FreeRDP_SspiModule:
 			return settings->SspiModule;
 
+		case FreeRDP_SspiSecurityPackageName:
+			return settings->SspiSecurityPackageName;
+
 		case FreeRDP_TargetNetAddress:
 			return settings->TargetNetAddress;
 
@@ -2816,6 +2819,9 @@ char* freerdp_settings_get_string_writable(rdpSettings* settings, size_t id)
 
 		case FreeRDP_SspiModule:
 			return settings->SspiModule;
+
+		case FreeRDP_SspiSecurityPackageName:
+			return settings->SspiSecurityPackageName;
 
 		case FreeRDP_TargetNetAddress:
 			return settings->TargetNetAddress;
@@ -3087,6 +3093,9 @@ BOOL freerdp_settings_set_string_(rdpSettings* settings, size_t id, const char* 
 
 		case FreeRDP_SspiModule:
 			return update_string(&settings->SspiModule, cnv.cc, len, cleanup);
+
+		case FreeRDP_SspiSecurityPackageName:
+			return update_string(&settings->SspiSecurityPackageName, cnv.cc, len, cleanup);
 
 		case FreeRDP_TargetNetAddress:
 			return update_string(&settings->TargetNetAddress, cnv.cc, len, cleanup);

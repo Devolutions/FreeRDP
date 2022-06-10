@@ -248,12 +248,27 @@ static SECURITY_STATUS nla_update_package_name(rdpNla* nla)
 		         nla->table->QuerySecurityPackageInfo, nla->table->FreeContextBuffer);
 		return ERROR_INTERNAL_ERROR;
 	}
-	status = nla->table->QuerySecurityPackageInfo(NLA_PKG_NAME, &pPackageInfo);
+
+	char* securityPackageName = NULL;
+	if (nla->settings->SspiSecurityPackageName)
+	{
+	#ifdef UNICODE
+		ConvertToUnicode(CP_UTF8, 0, nla->settings->SspiSecurityPackageName, -1, &securityPackageName, 0);
+	#else
+		securityPackageName = _strdup(nla->settings->SspiSecurityPackageName);
+	#endif
+	}
+	else
+	{
+		securityPackageName = _strdup(NLA_PKG_NAME);
+	}
+	status = nla->table->QuerySecurityPackageInfo(securityPackageName, &pPackageInfo);
 
 	if (status != SEC_E_OK)
 	{
 		WLog_ERR(TAG, "QuerySecurityPackageInfo status %s [0x%08" PRIX32 "]",
 		         GetSecurityStatusString(status), status);
+		free(securityPackageName);
 		return status;
 	}
 
@@ -264,11 +279,16 @@ static SECURITY_STATUS nla_update_package_name(rdpNla* nla)
 	{
 		WLog_ERR(TAG, "FreeContextBuffer status %s [0x%08" PRIX32 "]",
 		         GetSecurityStatusString(status), status);
+		free(securityPackageName);
 		return status;
 	}
 	if (!rc)
+	{
+		free(securityPackageName);
 		return ERROR_WINS_INTERNAL;
+	}
 
+	free(securityPackageName);
 	return status;
 }
 
@@ -1082,7 +1102,21 @@ static int nla_client_init(rdpNla* nla)
 
 	WLog_DBG(TAG, "%s %" PRIu32 " : packageName=%ls ; cbMaxToken=%d", __FUNCTION__, __LINE__,
 	         nla->packageName, nla->cbMaxToken);
-	nla->status = nla->table->AcquireCredentialsHandle(NULL, NLA_PKG_NAME, SECPKG_CRED_OUTBOUND,
+
+	char* securityPackageName = NULL;
+	if (nla->settings->SspiSecurityPackageName)
+	{
+	#ifdef UNICODE
+		ConvertToUnicode(CP_UTF8, 0, nla->settings->SspiSecurityPackageName, -1, &securityPackageName, 0);
+	#else
+		securityPackageName = _strdup(nla->settings->SspiSecurityPackageName);
+	#endif
+	}
+	else
+	{
+		securityPackageName = _strdup(NLA_PKG_NAME);
+	}
+	nla->status = nla->table->AcquireCredentialsHandle(NULL, securityPackageName, SECPKG_CRED_OUTBOUND,
 	                                                   NULL, nla->identityPtr, NULL, NULL,
 	                                                   &nla->credentials, &nla->expiration);
 
@@ -1090,6 +1124,7 @@ static int nla_client_init(rdpNla* nla)
 	{
 		WLog_ERR(TAG, "AcquireCredentialsHandle status %s [0x%08" PRIX32 "]",
 		         GetSecurityStatusString(nla->status), nla->status);
+		free(securityPackageName);
 		return -1;
 	}
 
@@ -1106,6 +1141,7 @@ static int nla_client_init(rdpNla* nla)
 	 * ISC_REQ_ALLOCATE_MEMORY
 	 */
 	nla->fContextReq = ISC_REQ_MUTUAL_AUTH | ISC_REQ_CONFIDENTIALITY | ISC_REQ_USE_SESSION_KEY;
+	free(securityPackageName);
 	return 1;
 }
 
