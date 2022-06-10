@@ -250,19 +250,26 @@ static SECURITY_STATUS nla_update_package_name(rdpNla* nla)
 	}
 
 	char* securityPackageName = NULL;
+#ifdef UNICODE
 	if (nla->settings->SspiSecurityPackageName)
 	{
-	#ifdef UNICODE
 		ConvertToUnicode(CP_UTF8, 0, nla->settings->SspiSecurityPackageName, -1, &securityPackageName, 0);
-	#else
+	}
+	else
+	{
+		securityPackageName = _wcsdup(NLA_PKG_NAME);
+	}
+#else
+	if (nla->settings->SspiSecurityPackageName)
+	{
 		securityPackageName = _strdup(nla->settings->SspiSecurityPackageName);
-	#endif
 	}
 	else
 	{
 		securityPackageName = _strdup(NLA_PKG_NAME);
 	}
-	status = nla->table->QuerySecurityPackageInfo(securityPackageName, &pPackageInfo);
+#endif
+	status = nla->table->QuerySecurityPackageInfo(NLA_PKG_NAME, &pPackageInfo);
 
 	if (status != SEC_E_OK)
 	{
@@ -1104,18 +1111,25 @@ static int nla_client_init(rdpNla* nla)
 	         nla->packageName, nla->cbMaxToken);
 
 	char* securityPackageName = NULL;
+#ifdef UNICODE
 	if (nla->settings->SspiSecurityPackageName)
 	{
-	#ifdef UNICODE
 		ConvertToUnicode(CP_UTF8, 0, nla->settings->SspiSecurityPackageName, -1, &securityPackageName, 0);
-	#else
+	}
+	else
+	{
+		securityPackageName = _wcsdup(NLA_PKG_NAME);
+	}
+#else
+	if (nla->settings->SspiSecurityPackageName)
+	{
 		securityPackageName = _strdup(nla->settings->SspiSecurityPackageName);
-	#endif
 	}
 	else
 	{
 		securityPackageName = _strdup(NLA_PKG_NAME);
 	}
+#endif
 	nla->status = nla->table->AcquireCredentialsHandle(NULL, securityPackageName, SECPKG_CRED_OUTBOUND,
 	                                                   NULL, nla->identityPtr, NULL, NULL,
 	                                                   &nla->credentials, &nla->expiration);
