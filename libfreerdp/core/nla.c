@@ -269,7 +269,7 @@ static SECURITY_STATUS nla_update_package_name(rdpNla* nla)
 		securityPackageName = _strdup(NLA_PKG_NAME);
 	}
 #endif
-	status = nla->table->QuerySecurityPackageInfo(NLA_PKG_NAME, &pPackageInfo);
+	status = nla->table->QuerySecurityPackageInfo(securityPackageName, &pPackageInfo);
 
 	if (status != SEC_E_OK)
 	{
