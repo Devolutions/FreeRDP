@@ -230,6 +230,40 @@ static BOOL nla_set_package_name(rdpNla* nla, const TCHAR* name)
 	return TRUE;
 }
 
+char* get_security_package_name(rdpNla* nla)
+{
+	char* securityPackageName = NULL;
+#ifdef UNICODE
+	if (nla->settings->SspiSecurityPackageName)
+	{
+		int n = ConvertToUnicode(CP_UTF8, 0, nla->settings->SspiSecurityPackageName, -1, &securityPackageName, 0);
+		// + 1: include NULL char
+		int len = strlen(nla->settings->SspiSecurityPackageName) + 1;
+		if (!securityPackageName || n != len)
+		{
+			free(securityPackageName);
+			WLog_ERR(TAG, "[%s] failed to convert to wide string: %p. bytes converted: %i. expected amout of bytes: %i",
+				__FUNCTION__, securityPackageName, n, len);
+			return NULL;
+		}
+	}
+	else
+	{
+		securityPackageName = _wcsdup(NLA_PKG_NAME);
+	}
+#else
+	if (nla->settings->SspiSecurityPackageName)
+	{
+		securityPackageName = _strdup(nla->settings->SspiSecurityPackageName);
+	}
+	else
+	{
+		securityPackageName = _strdup(NLA_PKG_NAME);
+	}
+#endif
+	return securityPackageName;
+}
+
 static SECURITY_STATUS nla_update_package_name(rdpNla* nla)
 {
 	BOOL rc;
@@ -249,26 +283,11 @@ static SECURITY_STATUS nla_update_package_name(rdpNla* nla)
 		return ERROR_INTERNAL_ERROR;
 	}
 
-	char* securityPackageName = NULL;
-#ifdef UNICODE
-	if (nla->settings->SspiSecurityPackageName)
+	char* securityPackageName = get_security_package_name(nla);
+	if (!securityPackageName)
 	{
-		ConvertToUnicode(CP_UTF8, 0, nla->settings->SspiSecurityPackageName, -1, &securityPackageName, 0);
+		return -1;
 	}
-	else
-	{
-		securityPackageName = _wcsdup(NLA_PKG_NAME);
-	}
-#else
-	if (nla->settings->SspiSecurityPackageName)
-	{
-		securityPackageName = _strdup(nla->settings->SspiSecurityPackageName);
-	}
-	else
-	{
-		securityPackageName = _strdup(NLA_PKG_NAME);
-	}
-#endif
 	status = nla->table->QuerySecurityPackageInfo(securityPackageName, &pPackageInfo);
 
 	if (status != SEC_E_OK)
@@ -1110,26 +1129,11 @@ static int nla_client_init(rdpNla* nla)
 	WLog_DBG(TAG, "%s %" PRIu32 " : packageName=%ls ; cbMaxToken=%d", __FUNCTION__, __LINE__,
 	         nla->packageName, nla->cbMaxToken);
 
-	char* securityPackageName = NULL;
-#ifdef UNICODE
-	if (nla->settings->SspiSecurityPackageName)
+	char* securityPackageName = get_security_package_name(nla);
+	if (!securityPackageName)
 	{
-		ConvertToUnicode(CP_UTF8, 0, nla->settings->SspiSecurityPackageName, -1, &securityPackageName, 0);
+		return -1;
 	}
-	else
-	{
-		securityPackageName = _wcsdup(NLA_PKG_NAME);
-	}
-#else
-	if (nla->settings->SspiSecurityPackageName)
-	{
-		securityPackageName = _strdup(nla->settings->SspiSecurityPackageName);
-	}
-	else
-	{
-		securityPackageName = _strdup(NLA_PKG_NAME);
-	}
-#endif
 	nla->status = nla->table->AcquireCredentialsHandle(NULL, securityPackageName, SECPKG_CRED_OUTBOUND,
 	                                                   NULL, nla->identityPtr, NULL, NULL,
 	                                                   &nla->credentials, &nla->expiration);
