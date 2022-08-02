@@ -47,7 +47,7 @@ int cs_cliprdr_send_client_format_list(CliprdrClientContext* cliprdr)
 			formats[index].formatName = _strdup(formatName);
 	}
 
-	formatList.msgFlags = CB_RESPONSE_OK;
+	formatList.common.msgFlags = CB_RESPONSE_OK;
 	formatList.numFormats = numFormats;
 	formatList.formats = formats;
 
@@ -66,8 +66,8 @@ int cs_cliprdr_send_client_format_data_request(CliprdrClientContext* cliprdr, UI
 
 	ZeroMemory(&formatDataRequest, sizeof(CLIPRDR_FORMAT_DATA_REQUEST));
 
-	formatDataRequest.msgType = CB_FORMAT_DATA_REQUEST;
-	formatDataRequest.msgFlags = 0;
+	formatDataRequest.common.msgType = CB_FORMAT_DATA_REQUEST;
+	formatDataRequest.common.msgFlags = 0;
 
 	formatDataRequest.requestedFormatId = formatId;
 	ctx->requestedFormatId = formatId;
@@ -230,14 +230,14 @@ UINT cs_cliprdr_server_format_data_request(CliprdrClientContext* cliprdr, const 
 	formatId = formatDataRequest->requestedFormatId;
 	data = (BYTE*) ClipboardGetData(ctx->clipboard, formatId, &size);
 
-	response.msgFlags = CB_RESPONSE_OK;
-	response.dataLen = size;
+	response.common.msgFlags = CB_RESPONSE_OK;
+	response.common.dataLen = size;
 	response.requestedFormatData = data;
 
 	if (!data)
 	{
-		response.msgFlags = CB_RESPONSE_FAIL;
-		response.dataLen = 0;
+		response.common.msgFlags = CB_RESPONSE_FAIL;
+		response.common.dataLen = 0;
 		response.requestedFormatData = NULL;
 	}
 
@@ -264,7 +264,7 @@ UINT cs_cliprdr_server_format_data_response(CliprdrClientContext* cliprdr, const
 	csContext* ctx = (csContext*) cliprdr->custom;
 	freerdp* instance = ((rdpContext*) ctx)->instance;
 
-	if (formatDataResponse->msgFlags == CB_RESPONSE_FAIL)
+	if (formatDataResponse->common.msgFlags == CB_RESPONSE_FAIL)
 	{
 		WLog_WARN(TAG, "Format Data Response PDU msgFlags is CB_RESPONSE_FAIL");
 		SetEvent(ctx->clipboardRequestEvent);
@@ -289,7 +289,7 @@ UINT cs_cliprdr_server_format_data_response(CliprdrClientContext* cliprdr, const
 	else
 		formatId = format->formatId;
 
-	size = formatDataResponse->dataLen;
+	size = formatDataResponse->common.dataLen;
 	data = (BYTE*)malloc(size);
 	CopyMemory(data, formatDataResponse->requestedFormatData, size);
 
