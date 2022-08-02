@@ -22,7 +22,7 @@
 #include <fcntl.h>
 
 #include <io.h>
-#include <windows.h>
+#include <winpr/windows.h>
 #include <dbghelp.h>
 
 #include "debug.h"
