@@ -181,16 +181,17 @@ static void cs_send_virtual_key(freerdp* instance, int vk, BOOL down)
 {
 	int flags;
 	DWORD scancode;
+	freerdp* inst = (freerdp*) instance;
 	
 	scancode = GetVirtualScanCodeFromVirtualKeyCode(vk, 4);
 	flags = (down ? KBD_FLAGS_DOWN : KBD_FLAGS_RELEASE);
 	flags |= ((scancode & KBDEXT) ? KBD_FLAGS_EXTENDED : 0);
-	freerdp_input_send_keyboard_event(instance->input, flags, scancode & 0xFF);
+	freerdp_input_send_keyboard_event(inst->context->input, flags, scancode & 0xFF);
 }
 
 static void cs_send_unicode_key(freerdp* instance, int vk)
 {
-	freerdp_input_send_unicode_keyboard_event(instance->input, 0, vk);
+	freerdp_input_send_unicode_keyboard_event(instance->context->input, 0, vk);
 }
 
 void cs_OnChannelConnectedEventHandler(rdpContext* context, ChannelConnectedEventArgs* e)
@@ -247,7 +248,7 @@ void cs_OnChannelDisconnectedEventHandler(rdpContext* context, ChannelDisconnect
 
 static BOOL cs_context_new(freerdp* instance, rdpContext* context)
 {
-	rdpSettings* settings = instance->settings;
+	rdpSettings* settings = context->settings;
 
 	instance->PreConnect = cs_pre_connect;
 	instance->PostConnect = cs_post_connect;
@@ -271,7 +272,7 @@ static void cs_context_free(freerdp* instance, rdpContext* context)
 static BOOL cs_pre_connect(freerdp* instance)
 {
 	rdpContext* context = instance->context;
-	rdpSettings* settings = instance->settings;
+	rdpSettings* settings = context->settings;
 	BOOL bitmap_cache = settings->BitmapCacheEnabled;
 	
 	ZeroMemory(settings->OrderSupport, 32);
@@ -300,7 +301,7 @@ static BOOL cs_pre_connect(freerdp* instance)
 	settings->OrderSupport[NEG_ELLIPSE_SC_INDEX] = FALSE;
 	settings->OrderSupport[NEG_ELLIPSE_CB_INDEX] = FALSE;
 
-	if (!freerdp_client_load_addins(context->channels, instance->settings))
+	if (!freerdp_client_load_addins(context->channels, context->settings))
 			return -1;
 
 	PubSub_SubscribeChannelConnected(context->pubSub,
@@ -412,7 +413,7 @@ static BOOL cs_post_connect(freerdp* instance)
 	UINT32 stride;
 	rdpUpdate* update;
 	csContext* context = (csContext*)instance->context;
-	rdpSettings* settings = instance->settings;
+	rdpSettings* settings = instance->context->settings;
 
 	update = instance->context->update;
 	
@@ -788,7 +789,7 @@ void csharp_freerdp_set_on_desktop_size_changed(void* instance, fnDesktopSizeCha
 BOOL csharp_freerdp_set_gateway_settings(void* instance, const char* hostname, UINT32 port, const char* username, const char* password, const char* domain, BOOL bypassLocal, BOOL httpTransport, BOOL rpcTransport)
 {
 	freerdp* inst = (freerdp*)instance;
-	rdpSettings* settings = inst->settings;
+	rdpSettings* settings = inst->context->settings;
 	
 	settings->GatewayPort = port;
 	settings->GatewayEnabled = TRUE;
@@ -816,7 +817,7 @@ BOOL csharp_freerdp_set_gateway_settings(void* instance, const char* hostname, U
 BOOL csharp_freerdp_set_client_hostname(void* instance, const char* clientHostname)
 {
 	freerdp* inst = (freerdp*)instance;
-	rdpSettings* settings = inst->settings;
+	rdpSettings* settings = inst->context->settings;
 	
 	if (!(settings->ClientHostname = _strdup(clientHostname)))
 		return FALSE;
@@ -827,7 +828,7 @@ BOOL csharp_freerdp_set_client_hostname(void* instance, const char* clientHostna
 void csharp_freerdp_set_console_mode(void* instance, BOOL useConsoleMode, BOOL useRestrictedAdminMode)
 {
 	freerdp* inst = (freerdp*)instance;
-	rdpSettings* settings = inst->settings;
+	rdpSettings* settings = inst->context->settings;
 
 	settings->ConsoleSession = useConsoleMode;
 	settings->RestrictedAdminModeRequired = useRestrictedAdminMode;
@@ -836,7 +837,7 @@ void csharp_freerdp_set_console_mode(void* instance, BOOL useConsoleMode, BOOL u
 void csharp_freerdp_set_redirect_clipboard(void* instance, BOOL redirectClipboard)
 {
 	freerdp* inst = (freerdp*)instance;
-	rdpSettings* settings = inst->settings;
+	rdpSettings* settings = inst->context->settings;
 
 	settings->RedirectClipboard = redirectClipboard;
 }
@@ -844,7 +845,7 @@ void csharp_freerdp_set_redirect_clipboard(void* instance, BOOL redirectClipboar
 void csharp_freerdp_set_redirect_audio(void* instance, int redirectSound, BOOL redirectCapture)
 {
 	freerdp* inst = (freerdp*)instance;
-	rdpSettings* settings = inst->settings;
+	rdpSettings* settings = inst->context->settings;
 
 	char** p;
 	size_t count;
@@ -877,7 +878,7 @@ void csharp_freerdp_set_redirect_audio(void* instance, int redirectSound, BOOL r
 BOOL csharp_freerdp_set_connection_info(void* instance, const char* hostname, const char* username, const char* password, const char* domain, UINT32 width, UINT32 height, UINT32 color_depth, UINT32 port, int codecLevel)
 {
 	freerdp* inst = (freerdp*)instance;
-	rdpSettings* settings = inst->settings;
+	rdpSettings* settings = inst->context->settings;
 
 	settings->DesktopWidth = width;
 	settings->DesktopHeight = height;
@@ -939,7 +940,7 @@ out_fail_strdup:
 void csharp_freerdp_set_security_info(void* instance, BOOL useTLS, BOOL useNLA)
 {
 	freerdp* inst = (freerdp*)instance;
-	rdpSettings* settings = inst->settings;
+	rdpSettings* settings = inst->context->settings;
 
 	settings->RdpSecurity = TRUE;
 	settings->TlsSecurity = FALSE;
@@ -955,7 +956,7 @@ void csharp_freerdp_set_security_info(void* instance, BOOL useTLS, BOOL useNLA)
 void csharp_freerdp_set_hyperv_info(void* instance, char* pcb)
 {
 	freerdp* inst = (freerdp*)instance;
-	rdpSettings* settings = inst->settings;
+	rdpSettings* settings = inst->context->settings;
 	
 	settings->PreconnectionBlob = _strdup(pcb);
 	settings->VmConnectMode = TRUE;
@@ -967,7 +968,7 @@ void csharp_freerdp_set_hyperv_info(void* instance, char* pcb)
 void csharp_freerdp_set_keyboard_layout(void* instance, int layoutID)
 {
 	freerdp* inst = (freerdp*)instance;
-	rdpSettings* settings = inst->settings;
+	rdpSettings* settings = inst->context->settings;
 	
 	settings->KeyboardLayout = layoutID;
 }
@@ -975,7 +976,7 @@ void csharp_freerdp_set_keyboard_layout(void* instance, int layoutID)
 void csharp_freerdp_set_redirect_all_drives(void* instance, BOOL redirect)
 {
 	freerdp* inst = (freerdp*)instance;
-	rdpSettings* settings = inst->settings;
+	rdpSettings* settings = inst->context->settings;
 	
 	settings->RedirectDrives = redirect;
 }
@@ -983,7 +984,7 @@ void csharp_freerdp_set_redirect_all_drives(void* instance, BOOL redirect)
 void csharp_freerdp_set_redirect_home_drive(void* instance, BOOL redirect)
 {
 	freerdp* inst = (freerdp*)instance;
-	rdpSettings* settings = inst->settings;
+	rdpSettings* settings = inst->context->settings;
 	
 	settings->RedirectHomeDrive = redirect;
 }
@@ -991,7 +992,7 @@ void csharp_freerdp_set_redirect_home_drive(void* instance, BOOL redirect)
 void csharp_freerdp_set_redirect_printers(void* instance, BOOL redirect)
 {
 	freerdp* inst = (freerdp*)instance;
-	rdpSettings* settings = inst->settings;
+	rdpSettings* settings = inst->context->settings;
 	
 	settings->RedirectPrinters = redirect;
 }
@@ -999,7 +1000,7 @@ void csharp_freerdp_set_redirect_printers(void* instance, BOOL redirect)
 void csharp_freerdp_set_redirect_smartcards(void* instance, BOOL redirect)
 {
 	freerdp* inst = (freerdp*)instance;
-	rdpSettings* settings = inst->settings;
+	rdpSettings* settings = inst->context->settings;
 	
 	settings->RedirectSmartCards = redirect;
 }
@@ -1007,7 +1008,7 @@ void csharp_freerdp_set_redirect_smartcards(void* instance, BOOL redirect)
 BOOL csharp_freerdp_set_data_directory(void* instance, const char* directory)
 {
 	freerdp* inst = (freerdp*)instance;
-	rdpSettings* settings = inst->settings;
+	rdpSettings* settings = inst->context->settings;
 
 	settings->HomePath = settings->ConfigPath = NULL;
 
@@ -1034,7 +1035,7 @@ out_malloc_fail:
 void csharp_freerdp_set_support_display_control(void* instance, BOOL supportDisplayControl)
 {
 	freerdp* inst = (freerdp*)instance;
-	rdpSettings* settings = inst->settings;
+	rdpSettings* settings = inst->context->settings;
 
 	settings->SupportDisplayControl = supportDisplayControl;
 }
@@ -1042,7 +1043,7 @@ void csharp_freerdp_set_support_display_control(void* instance, BOOL supportDisp
 BOOL csharp_freerdp_set_dynamic_resolution_update(void* instance, BOOL dynamicResolutionUpdate)
 {
 	freerdp* inst = (freerdp*)instance;
-	rdpSettings* settings = inst->settings;
+	rdpSettings* settings = inst->context->settings;
 
 	if (settings->SmartSizing && dynamicResolutionUpdate) /* Smart sizing and dynamic resolution are mutually exclusing */
 		return FALSE;
@@ -1055,7 +1056,7 @@ BOOL csharp_freerdp_set_dynamic_resolution_update(void* instance, BOOL dynamicRe
 void csharp_freerdp_set_alternate_shell(void* instance, const char* shell)
 {
 	freerdp* inst = (freerdp*)instance;
-	rdpSettings* settings = inst->settings;
+	rdpSettings* settings = inst->context->settings;
 
 	settings->AlternateShell = _strdup(shell);
 }
@@ -1063,7 +1064,7 @@ void csharp_freerdp_set_alternate_shell(void* instance, const char* shell)
 void csharp_freerdp_set_shell_working_directory(void* instance, const char* directory)
 {
 	freerdp* inst = (freerdp*)instance;
-	rdpSettings* settings = inst->settings;
+	rdpSettings* settings = inst->context->settings;
 
 	settings->ShellWorkingDirectory = _strdup(directory);
 }
@@ -1071,7 +1072,7 @@ void csharp_freerdp_set_shell_working_directory(void* instance, const char* dire
 void csharp_freerdp_set_scale_factor(void* instance, UINT32 desktopScaleFactor, UINT32 deviceScaleFactor)
 {
 	freerdp* inst = (freerdp*)instance;
-	rdpSettings* settings = inst->settings;
+	rdpSettings* settings = inst->context->settings;
 	
 	settings->DesktopScaleFactor = desktopScaleFactor;
 	settings->DeviceScaleFactor = deviceScaleFactor;
@@ -1191,7 +1192,7 @@ BOOL csharp_freerdp_send_monitor_layout(void* instance, uint32_t targetWidth, ui
 {
 	BOOL status = FALSE;
 	freerdp* inst = (freerdp*)instance;
-	rdpSettings* settings = inst->settings;
+	rdpSettings* settings = inst->context->settings;
 	csContext* csc = (csContext*)inst->context;
 	int rc = CHANNEL_RC_OK;
 	DISPLAY_CONTROL_MONITOR_LAYOUT layout = { 0 };
@@ -1244,12 +1245,14 @@ exit:
 
 void csharp_freerdp_send_cursor_event(void* instance, int x, int y, int flags)
 {
-	freerdp_input_send_mouse_event(((freerdp*)instance)->input, flags, x, y);
+	freerdp* inst = (freerdp*) instance;
+	freerdp_input_send_mouse_event(inst->context->input, flags, x, y);
 }
 
 void csharp_freerdp_send_cursor_event_ex(void* instance, int x, int y, int flags)
 {
-	freerdp_input_send_extended_mouse_event(((freerdp*)instance)->input, flags, x, y);
+	freerdp* inst = (freerdp*) instance;
+	freerdp_input_send_extended_mouse_event(inst->context->input, flags, x, y);
 }
 
 void csharp_freerdp_send_clipboard_text(void* instance, const char* text)
@@ -1416,9 +1419,8 @@ DWORD csharp_get_scancode_from_vk(DWORD keycode, DWORD flags)
 
 void csharp_freerdp_send_scancode(void* instance, int flags, DWORD scancode)
 {
-	freerdp* inst = (freerdp*)instance;
-	
-	freerdp_input_send_keyboard_event(inst->input, flags, scancode);
+	freerdp* inst = (freerdp*) instance;
+	freerdp_input_send_keyboard_event(inst->context->input, flags, scancode);
 }
 
 void csharp_freerdp_redirect_drive(void* instance, char* name, char* path)
@@ -1426,13 +1428,13 @@ void csharp_freerdp_redirect_drive(void* instance, char* name, char* path)
 	freerdp* inst = (freerdp*)instance;
 	const char* d[] = { "drive", name, path};
 	
-	freerdp_client_add_device_channel(inst->settings, 3, d);
+	freerdp_client_add_device_channel(inst->context->settings, 3, d);
 }
 
 BOOL csharp_freerdp_set_smart_sizing(void* instance, BOOL smartSizing)
 {
 	freerdp* inst = (freerdp*)instance;
-	rdpSettings* settings = inst->settings;
+	rdpSettings* settings = inst->context->settings;
 	
 	if (settings->DynamicResolutionUpdate && smartSizing) /* Smart sizing and dynamic resolution are mutually exclusing */
 		return FALSE;
@@ -1445,7 +1447,7 @@ BOOL csharp_freerdp_set_smart_sizing(void* instance, BOOL smartSizing)
 void csharp_freerdp_set_load_balance_info(void* instance, const char* info)
 {
 	freerdp* inst = (freerdp*)instance;
-	rdpSettings* settings = inst->settings;
+	rdpSettings* settings = inst->context->settings;
 
 	settings->LoadBalanceInfo = (BYTE*)_strdup(info);
 	settings->LoadBalanceInfoLength = (UINT32)strlen((char*) settings->LoadBalanceInfo);
@@ -1455,7 +1457,7 @@ void csharp_freerdp_set_performance_flags(void* instance, BOOL disableWallpaper,
 					  BOOL bitmapCacheEnabled, BOOL disableFullWindowDrag, BOOL disableMenuAnims, BOOL disableThemes)
 {
 	freerdp* inst = (freerdp*)instance;
-	rdpSettings* settings = inst->settings;
+	rdpSettings* settings = inst->context->settings;
 	
 	settings->DisableWallpaper = disableWallpaper;
 	settings->AllowFontSmoothing = allowFontSmoothing;
@@ -1469,7 +1471,7 @@ void csharp_freerdp_set_performance_flags(void* instance, BOOL disableWallpaper,
 void csharp_freerdp_set_tcpacktimeout(void* instance, UINT32 value)
 {
 	freerdp* inst = (freerdp*)instance;
-	rdpSettings* settings = inst->settings;
+	rdpSettings* settings = inst->context->settings;
 
 	settings->TcpAckTimeout = value;
 }
@@ -1477,7 +1479,7 @@ void csharp_freerdp_set_tcpacktimeout(void* instance, UINT32 value)
 BOOL csharp_freerdp_set_value_for_name(void* instance, const char* name, const char* value)
 {
 	freerdp* inst = (freerdp*)instance;
-	rdpSettings* settings = inst->settings;
+	rdpSettings* settings = inst->context->settings;
 
 	return freerdp_settings_set_value_for_name(settings, name, value);
 }
@@ -1486,7 +1488,7 @@ void csharp_freerdp_sync_toggle_keys(void* instance)
 {
 #ifdef WIN32
 	UINT16 syncFlags = 0;
-	freerdp* inst = (freerdp*)instance;
+	freerdp* inst = (freerdp*) instance;
 	
 	if (!inst)
 		return;
@@ -1503,20 +1505,20 @@ void csharp_freerdp_sync_toggle_keys(void* instance)
 	if (GetKeyState(VK_KANA))
 		syncFlags |= KBD_SYNC_KANA_LOCK;
 	
-	inst->input->FocusInEvent(inst->input, syncFlags);
+	inst->context->input->FocusInEvent(inst->context->input, syncFlags);
 #endif
 }
 
 FREERDP_API BOOL csharp_freerdp_input_send_focus_in_event(void* instance, uint16_t toggleStates)
 {
-	rdpInput* input = ((freerdp*)instance)->input;
-	return freerdp_input_send_focus_in_event(input, toggleStates);
+	freerdp* inst = (freerdp*) instance;
+	return freerdp_input_send_focus_in_event(inst->context->input, toggleStates);
 }
 
 FREERDP_API BOOL csharp_freerdp_input_send_synchronize_event(void* instance, uint32_t flags)
 {
-	rdpInput* input = ((freerdp*)instance)->input;
-	return freerdp_input_send_synchronize_event(input, flags);
+	freerdp* inst = (freerdp*) instance;
+	return freerdp_input_send_synchronize_event(inst->context->input, flags);
 }
 
 FREERDP_API void csharp_freerdp_create_virtual_channels(void* instance, const char* channelNames)
@@ -1526,7 +1528,8 @@ FREERDP_API void csharp_freerdp_create_virtual_channels(void* instance, const ch
 	char** p;
 	int status;
 	size_t count;
-	rdpSettings* settings = ((freerdp*)instance)->settings;
+	freerdp* inst = (freerdp*) instance;
+	rdpSettings* settings = inst->context->settings;
 
  	r = _strdup(channelNames);
 
