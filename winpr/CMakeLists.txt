@@ -30,6 +30,15 @@ if (NOT FREERDP_UNIFIED_BUILD)
 	set(CMAKE_C_STANDARD_REQUIRED ON)
 	set(CMAKE_C_EXTENSIONS ON)
 
+	option(WITH_INTERPROCEDURAL_OPTIMIZATION "Check for LTO support and enable if available" ON)
+	if(WITH_INTERPROCEDURAL_OPTIMIZATION)
+		include(CheckIPOSupported)
+		check_ipo_supported(RESULT supported OUTPUT error)
+		if(supported)
+			set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+		endif()
+	endif()
+
 	include(CommonConfigOptions)
 	include(ConfigOptions)
 
