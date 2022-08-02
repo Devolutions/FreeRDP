@@ -26,10 +26,13 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS ON)
 
-include(CheckIPOSupported)
-check_ipo_supported(RESULT supported OUTPUT error)
-if (supported)
-    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+option(WITH_INTERPROCEDURAL_OPTIMIZATION "Check for LTO support and enable if available" ON)
+if(WITH_INTERPROCEDURAL_OPTIMIZATION)
+	include(CheckIPOSupported)
+	check_ipo_supported(RESULT supported OUTPUT error)
+	if(supported)
+		set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+	endif()
 endif()
 
 if(NOT DEFINED VENDOR)
@@ -500,7 +503,7 @@ if(ANDROID)
 
 	set_property( GLOBAL PROPERTY FIND_LIBRARY_USE_LIB64_PATHS ${ANDROID_LIBRARY_USE_LIB64_PATHS} )
 
-	if (${ANDROID_ABI} STREQUAL "armeabi")
+	if (${ANDROID_ABI} STREQUAL armeabi-v7a)
 		set (WITH_NEON OFF)
 	endif()
 
