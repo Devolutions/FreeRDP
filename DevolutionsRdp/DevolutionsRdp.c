@@ -937,7 +937,7 @@ out_fail_strdup:
 	return FALSE;
 }
 
-void csharp_freerdp_set_security_info(void* instance, BOOL useTLS, BOOL useNLA)
+void csharp_freerdp_set_security_info(void* instance, BOOL useTLS, BOOL useNLA, BOOL useRDP)
 {
 	freerdp* inst = (freerdp*)instance;
 	rdpSettings* settings = inst->context->settings;
@@ -946,11 +946,20 @@ void csharp_freerdp_set_security_info(void* instance, BOOL useTLS, BOOL useNLA)
 	settings->TlsSecurity = FALSE;
 	settings->NlaSecurity = FALSE;
 
-	if(useTLS)
-		settings->TlsSecurity = TRUE;
+	if (!useRDP)
+	{
+		settings->RdpSecurity = FALSE;
+	}
 
-	if(useNLA)
+	if (useTLS)
+	{
+		settings->TlsSecurity = TRUE;
+	}
+
+	if (useNLA)
+	{
 		settings->NlaSecurity = TRUE;
+	}
 }
 
 void csharp_freerdp_set_hyperv_info(void* instance, char* pcb)
