@@ -44,7 +44,7 @@ typedef struct csharp_context
 	fnOnAuthenticate onGwAuthenticate;
 	fnOnChannelReceivedData onChannelReceivedData;
 
-    /* Legacy clipboard */
+	/* Legacy clipboard */
 	wClipboard* clipboard;
 	UINT32 numServerFormats;
 	UINT32 requestedFormatId;
@@ -58,6 +58,8 @@ typedef struct csharp_context
 	/* Dynamic resolution */
 	DispClientContext* disp;
 	UINT64 lastSentDate;
+	/* Other */
+	UINT16 audioQuality;
 } csContext;
 
 FREERDP_API BOOL csharp_configure_log_callback(int wlogLevel, wLogCallbackMessage_t fn);
@@ -94,6 +96,7 @@ FREERDP_API void csharp_freerdp_set_performance_flags(void* instance,
 							   BOOL disableFullWindowDrag,
 							   BOOL disableMenuAnims,
 							   BOOL disableThemes);
+FREERDP_API void csharp_freerdp_set_audio_quality_mode(void* instance, UINT16 qualityMode);
 FREERDP_API void csharp_freerdp_set_tcpacktimeout(void* instance, UINT32 value);
 FREERDP_API BOOL csharp_freerdp_set_value_for_name(void* settings, const char* name, const char* value);
 FREERDP_API BOOL csharp_shall_disconnect(void* instance);
