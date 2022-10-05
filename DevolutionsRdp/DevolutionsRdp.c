@@ -2,6 +2,7 @@
 #include <freerdp/client/channels.h>
 #include <freerdp/client/cmdline.h>
 #include <freerdp/client/cliprdr.h>
+#include <freerdp/codec/audio.h>
 #include <freerdp/event.h>
 #include <freerdp/settings.h>
 #include <freerdp/gdi/gdi.h>
@@ -844,8 +845,10 @@ void csharp_freerdp_set_redirect_clipboard(void* instance, BOOL redirectClipboar
 
 void csharp_freerdp_set_redirect_audio(void* instance, int redirectSound, BOOL redirectCapture)
 {
-	freerdp* inst = (freerdp*)instance;
+	freerdp* inst = (freerdp*) instance;
 	rdpSettings* settings = inst->context->settings;
+	csContext* csc = (csContext*) inst->context;
+	char rdpSndCli[10] = { 0 };
 
 	char** p;
 	size_t count;
@@ -853,7 +856,8 @@ void csharp_freerdp_set_redirect_audio(void* instance, int redirectSound, BOOL r
 	if (redirectSound == AUDIO_MODE_REDIRECT)
 	{
 		settings->AudioPlayback = TRUE;
-		p = freerdp_command_line_parse_comma_separated_values_offset("rdpsnd", NULL, &count);
+		sprintf_s(rdpSndCli, sizeof(rdpSndCli), "quality:%u", csc->audioQuality);
+		p = freerdp_command_line_parse_comma_separated_values_offset("rdpsnd", rdpSndCli, &count);
 		freerdp_client_add_static_channel(settings, count, p);
 		free(p);
 	}
@@ -1475,6 +1479,19 @@ void csharp_freerdp_set_performance_flags(void* instance, BOOL disableWallpaper,
 	settings->DisableFullWindowDrag = disableFullWindowDrag;
 	settings->DisableMenuAnims = disableMenuAnims;
 	settings->DisableThemes = disableThemes;
+}
+
+void csharp_freerdp_set_audio_quality_mode(void* instance, UINT16 qualityMode)
+{
+	if (qualityMode > HIGH_QUALITY)
+	{
+		return;
+	}
+
+	freerdp* inst = (freerdp*)instance;
+	csContext* csc = (csContext*)inst->context;
+
+	csc->audioQuality = qualityMode;
 }
 
 void csharp_freerdp_set_tcpacktimeout(void* instance, UINT32 value)
