@@ -136,10 +136,11 @@ struct rdp_nla
 	SecBuffer PublicKey;
 	SecBuffer tsCredentials;
 
+	WCHAR* PackageList;
 	LPTSTR ServicePrincipalName;
-	SEC_WINNT_AUTH_IDENTITY* identity;
-	SEC_WINNT_AUTH_IDENTITY_WINPR identityWinPr;
-	SEC_WINPR_KERBEROS_SETTINGS* kerberosSettings;
+	SEC_WINNT_AUTH_IDENTITY identity;
+	SEC_WINPR_NTLM_SETTINGS ntlmSettings;
+	SEC_WINPR_KERBEROS_SETTINGS kerberosSettings;
 	PSecurityFunctionTable table;
 	SecPkgContext_Sizes ContextSizes;
 };
@@ -485,8 +486,7 @@ static BOOL nla_adjust_settings_from_smartcard(rdpNla* nla)
 	if (!settings->SmartcardLogon)
 		return TRUE;
 
-	kerbSettings = nla->kerberosSettings;
-	WINPR_ASSERT(kerbSettings);
+	kerbSettings = &nla->kerberosSettings;
 
 	if (!settings->CspName)
 	{
@@ -653,16 +653,15 @@ static BOOL nla_client_setup_identity(rdpNla* nla)
 			case AUTH_NO_CREDENTIALS:
 				freerdp_set_last_error_log(instance->context,
 				                           FREERDP_ERROR_CONNECT_NO_OR_MISSING_CREDENTIALS);
-				return 0;
+				return FALSE;
 			default:
-				return 0;
+				return FALSE;
 		}
 	}
 
 	if (!settings->Username)
 	{
-		sspi_FreeAuthIdentity(nla->identity);
-		nla->identity = NULL;
+		sspi_FreeAuthIdentity(&nla->identity);
 	}
 	else if (settings->SmartcardLogon)
 	{
@@ -671,7 +670,7 @@ static BOOL nla_client_setup_identity(rdpNla* nla)
 			CERT_CREDENTIAL_INFO certInfo = { sizeof(CERT_CREDENTIAL_INFO), { 0 } };
 			LPSTR marshalledCredentials;
 
-			memcpy(certInfo.rgbHashOfCert, nla->kerberosSettings->certSha1,
+			memcpy(certInfo.rgbHashOfCert, nla->kerberosSettings.certSha1,
 			       sizeof(certInfo.rgbHashOfCert));
 
 			if (!CredMarshalCredentialA(CertCredential, &certInfo, &marshalledCredentials))
@@ -680,14 +679,14 @@ static BOOL nla_client_setup_identity(rdpNla* nla)
 				return FALSE;
 			}
 
-			if (sspi_SetAuthIdentityA(nla->identity, marshalledCredentials, NULL,
+			if (sspi_SetAuthIdentityA(&nla->identity, marshalledCredentials, NULL,
 			                          settings->Password) < 0)
-				return -1;
+				return FALSE;
 
 			CredFree(marshalledCredentials);
 		}
 #else
-		if (sspi_SetAuthIdentityA(nla->identity, settings->Username, settings->Domain,
+		if (sspi_SetAuthIdentityA(&nla->identity, settings->Username, settings->Domain,
 		                          settings->Password) < 0)
 			return -1;
 #endif /* _WIN32 */
@@ -701,36 +700,44 @@ static BOOL nla_client_setup_identity(rdpNla* nla)
 		if (settings->RedirectionPassword && (settings->RedirectionPasswordLength > 0))
 		{
 			if (sspi_SetAuthIdentityWithUnicodePassword(
-			        nla->identity, settings->Username, settings->Domain,
+			        &nla->identity, settings->Username, settings->Domain,
 			        (UINT16*)settings->RedirectionPassword,
 			        settings->RedirectionPasswordLength / sizeof(WCHAR) - 1) < 0)
-				return -1;
+				return FALSE;
 		}
 
 		if (settings->RestrictedAdminModeRequired)
 		{
 			if (settings->PasswordHash && strlen(settings->PasswordHash) == 32)
 			{
-				if (sspi_SetAuthIdentityA(nla->identity, settings->Username, settings->Domain,
+				if (sspi_SetAuthIdentityA(&nla->identity, settings->Username, settings->Domain,
 				                          settings->PasswordHash) < 0)
-					return -1;
+					return FALSE;
 
 				/**
 				 * Increase password hash length by LB_PASSWORD_MAX_LENGTH to obtain a
 				 * length exceeding the maximum (LB_PASSWORD_MAX_LENGTH) and use it this for
 				 * hash identification in WinPR.
 				 */
-				nla->identity->PasswordLength += LB_PASSWORD_MAX_LENGTH;
+				nla->identity.PasswordLength += LB_PASSWORD_MAX_LENGTH;
 				usePassword = FALSE;
 			}
 		}
 
 		if (usePassword)
 		{
-			if (sspi_SetAuthIdentityA(nla->identity, settings->Username, settings->Domain,
+			if (sspi_SetAuthIdentityA(&nla->identity, settings->Username, settings->Domain,
 			                          settings->Password) < 0)
-				return -1;
+				return FALSE;
 		}
+	}
+
+	if (settings->AuthenticationPackageList)
+	{
+		ConvertToUnicode(CP_UTF8, 0, settings->AuthenticationPackageList, -1, &nla->PackageList, 0);
+
+		if (!nla->PackageList)
+			return FALSE;
 	}
 
 	return TRUE;
@@ -880,8 +887,7 @@ static BOOL nla_setup_kerberos(rdpNla* nla)
 	settings = nla->rdpcontext->settings;
 	WINPR_ASSERT(settings);
 
-	kerbSettings = nla->kerberosSettings;
-	WINPR_ASSERT(kerbSettings);
+	kerbSettings = &nla->kerberosSettings;
 
 	if (settings->KerberosKdcUrl)
 	{
@@ -950,9 +956,10 @@ static BOOL nla_client_init_cred_handle(rdpNla* nla)
 	SEC_WINPR_KERBEROS_SETTINGS* kerbSettings;
 
 	WINPR_ASSERT(nla);
-	kerbSettings = nla->kerberosSettings;
-	WINPR_ASSERT(kerbSettings);
-	WINPR_ASSERT(nla->table->SetCredentialsAttributes);
+	kerbSettings = &nla->kerberosSettings;
+
+	if (!nla->table->SetCredentialsAttributes)
+		return TRUE;
 
 	if (kerbSettings->kdcUrl)
 	{
@@ -994,6 +1001,9 @@ static int nla_client_init(rdpNla* nla)
 	size_t length;
 	rdpTls* tls = NULL;
 	rdpSettings* settings;
+	SEC_WINNT_AUTH_IDENTITY* identity;
+	SEC_WINNT_AUTH_IDENTITY_EXW* identityEx;
+	SEC_WINNT_AUTH_IDENTITY_WINPR authData;
 
 	WINPR_ASSERT(nla);
 	WINPR_ASSERT(nla->rdpcontext);
@@ -1051,10 +1061,33 @@ static int nla_client_init(rdpNla* nla)
 	if (nla->status != SEC_E_OK)
 		return -1;
 
+	ZeroMemory(&authData, sizeof(SEC_WINNT_AUTH_IDENTITY_WINPR));
+
+	identity = &nla->identity;
+	identityEx = &authData.identity;
+	identityEx->Version = SEC_WINNT_AUTH_IDENTITY_VERSION;
+	identityEx->Length = sizeof(SEC_WINNT_AUTH_IDENTITY_EX);
+	identityEx->User = identity->User;
+	identityEx->UserLength = identity->UserLength;
+	identityEx->Domain = identity->Domain;
+	identityEx->DomainLength = identity->DomainLength;
+	identityEx->Password = identity->Password;
+	identityEx->PasswordLength = identity->PasswordLength;
+	identityEx->Flags = identity->Flags;
+
+	if (nla->PackageList)
+	{
+		identityEx->PackageList = (UINT16*)nla->PackageList;
+		identityEx->PackageListLength = _wcslen(nla->PackageList);
+	}
+
+	authData.ntlmSettings = &nla->ntlmSettings;
+	authData.kerberosSettings = &nla->kerberosSettings;
+
 	WLog_DBG(TAG, "%s %" PRIu32 " : packageName=%s ; cbMaxToken=%" PRIu32, __FUNCTION__, __LINE__,
 	         nla->packageName, nla->cbMaxToken);
 	nla->status = nla->table->AcquireCredentialsHandle(NULL, NLA_PKG_NAME, SECPKG_CRED_OUTBOUND,
-	                                                   NULL, nla->identity, NULL, NULL,
+	                                                   NULL, (void*)&authData, NULL, NULL,
 	                                                   &nla->credentials, &nla->expiration);
 
 	if (nla->status != SEC_E_OK)
@@ -1368,7 +1401,7 @@ static int nla_server_init(rdpNla* nla)
 {
 	rdpTls* tls;
 	freerdp_peer* peer;
-	SEC_WINNT_AUTH_IDENTITY_WINPR* identity;
+	SEC_WINPR_NTLM_SETTINGS* ntlmSettings;
 
 	WINPR_ASSERT(nla);
 
@@ -1393,10 +1426,10 @@ static int nla_server_init(rdpNla* nla)
 	peer = nla->rdpcontext->peer;
 	WINPR_ASSERT(peer);
 
-	identity = &nla->identityWinPr;
-	identity->ntlmSettings.hashCallback = peer->SspiNtlmHashCallback;
-	identity->ntlmSettings.hashCallbackArg = peer;
-	identity->ntlmSettings.samFile = nla->SamFile;
+	ntlmSettings = &nla->ntlmSettings;
+	ntlmSettings->hashCallback = peer->SspiNtlmHashCallback;
+	ntlmSettings->hashCallbackArg = peer;
+	ntlmSettings->samFile = nla->SamFile;
 
 	nla->status = nla_update_package_name(nla);
 
@@ -1404,7 +1437,7 @@ static int nla_server_init(rdpNla* nla)
 		return -1;
 
 	nla->status = nla->table->AcquireCredentialsHandle(NULL, NLA_PKG_NAME, SECPKG_CRED_INBOUND,
-	                                                   NULL, nla->identity, NULL, NULL,
+	                                                   NULL, &nla->identity, NULL, NULL,
 	                                                   &nla->credentials, &nla->expiration);
 
 	if (nla->status != SEC_E_OK)
@@ -2008,7 +2041,7 @@ static BOOL nla_read_ts_credentials(rdpNla* nla, SecBuffer* data, size_t offset)
 		if (!WinPrAsn1DecReadContextualOctetString(&dec, 2, &error, &password, FALSE))
 			return FALSE;
 
-		if (sspi_SetAuthIdentityWithLengthW(nla->identity, (WCHAR*)username.data,
+		if (sspi_SetAuthIdentityWithLengthW(&nla->identity, (WCHAR*)username.data,
 		                                    username.len / sizeof(WCHAR), (WCHAR*)domain.data,
 		                                    domain.len / sizeof(WCHAR), (WCHAR*)password.data,
 		                                    password.len / sizeof(WCHAR)) < 0)
@@ -2124,16 +2157,16 @@ static BOOL nla_encode_ts_credentials(rdpNla* nla)
 		if (!WinPrAsn1EncSeqContainer(enc))
 			goto out;
 
-		if (!settings->DisableCredentialsDelegation && nla->identity)
+		if (!settings->DisableCredentialsDelegation)
 		{
-			username.len = nla->identity->UserLength * 2;
-			username.data = (BYTE*)nla->identity->User;
+			username.len = nla->identity.UserLength * 2;
+			username.data = (BYTE*)nla->identity.User;
 
-			domain.len = nla->identity->DomainLength * 2;
-			domain.data = (BYTE*)nla->identity->Domain;
+			domain.len = nla->identity.DomainLength * 2;
+			domain.data = (BYTE*)nla->identity.Domain;
 
-			password.len = nla->identity->PasswordLength * 2;
-			password.data = (BYTE*)nla->identity->Password;
+			password.len = nla->identity.PasswordLength * 2;
+			password.data = (BYTE*)nla->identity.Password;
 		}
 
 		if (!WinPrAsn1EncContextualOctetString(enc, 0, &domain))
@@ -2589,15 +2622,13 @@ rdpNla* nla_new(rdpContext* context, rdpTransport* transport)
 	if (!nla)
 		return NULL;
 
-	nla->identity = (SEC_WINNT_AUTH_IDENTITY*)&nla->identityWinPr;
-	nla->identity->Flags = SEC_WINNT_AUTH_IDENTITY_EXTENDED;
+	nla->identity.Flags = SEC_WINNT_AUTH_IDENTITY_EXTENDED;
 	nla->rdpcontext = context;
 	nla->server = settings->ServerMode;
 	nla->transport = transport;
 	nla->sendSeqNum = 0;
 	nla->recvSeqNum = 0;
 	nla->version = 6;
-	nla->kerberosSettings = &nla->identityWinPr.kerberosSettings;
 	SecInvalidateHandle(&nla->context);
 
 	if (settings->NtlmSamFile)
@@ -2711,13 +2742,14 @@ void nla_free(rdpNla* nla)
 	sspi_SecBufferFree(&nla->PublicKey);
 	sspi_SecBufferFree(&nla->tsCredentials);
 
+	free(nla->PackageList);
 	free(nla->ServicePrincipalName);
-	free(nla->kerberosSettings->kdcUrl);
-	free(nla->kerberosSettings->armorCache);
-	free(nla->kerberosSettings->cache);
-	free(nla->kerberosSettings->pkinitX509Anchors);
-	free(nla->kerberosSettings->pkinitX509Identity);
-	sspi_FreeAuthIdentity(nla->identity);
+	free(nla->kerberosSettings.kdcUrl);
+	free(nla->kerberosSettings.armorCache);
+	free(nla->kerberosSettings.cache);
+	free(nla->kerberosSettings.pkinitX509Anchors);
+	free(nla->kerberosSettings.pkinitX509Identity);
+	sspi_FreeAuthIdentity(&nla->identity);
 	nla_set_package_name(nla, NULL);
 	free(nla);
 }
@@ -2727,7 +2759,7 @@ SEC_WINNT_AUTH_IDENTITY* nla_get_identity(rdpNla* nla)
 	if (!nla)
 		return NULL;
 
-	return nla->identity;
+	return &nla->identity;
 }
 
 NLA_STATE nla_get_state(rdpNla* nla)
