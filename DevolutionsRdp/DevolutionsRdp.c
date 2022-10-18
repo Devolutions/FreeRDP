@@ -372,16 +372,16 @@ BOOL cs_desktop_resize(rdpContext* context)
 
 	csc->buffer = csc->desktopSizeChanged(context->instance, settings->DesktopWidth, settings->DesktopHeight);
 
-	if(!csc->buffer)
-		return FALSE;
-
-	if (!gdi_resize_ex(gdi, settings->DesktopWidth, settings->DesktopHeight,
-					stride, PIXEL_FORMAT_BGRX32, csc->buffer, NULL))
+	if (settings->DeactivateClientDecoding)
 	{
-		return FALSE;
+		return gdi_resize(gdi, settings->DesktopWidth, settings->DesktopHeight);
+	}
+	else if (csc->buffer)
+	{
+		return gdi_resize_ex(gdi, settings->DesktopWidth, settings->DesktopHeight, stride, PIXEL_FORMAT_BGRX32, csc->buffer, NULL);
 	}
 
-	return TRUE;
+	return FALSE;
 }
 
 void freerdp_csharp_input_cb(freerdp *instance)
@@ -423,8 +423,16 @@ static BOOL cs_post_connect(freerdp* instance)
 	stride = settings->DesktopWidth * 4;
 	settings->GfxH264 = FALSE;
 
-	if (!gdi_init_ex(instance, PIXEL_FORMAT_BGRX32, stride, context->buffer, NULL))
-		return FALSE;
+	if (settings->DeactivateClientDecoding)
+	{
+		if (!gdi_init(instance, PIXEL_FORMAT_XRGB32))
+			return FALSE;
+	}
+	else
+	{
+		if (!gdi_init_ex(instance, PIXEL_FORMAT_BGRX32, stride, context->buffer, NULL))
+			return FALSE;
+	}
 
 	update->BeginPaint = cs_begin_paint;
 	update->EndPaint = cs_end_paint;
