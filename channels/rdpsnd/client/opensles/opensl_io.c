@@ -221,7 +221,6 @@ static SLresult openSLPlayOpen(OPENSL_STREAM* p)
 		// register callback on the buffer queue
 		result = (*p->bqPlayerBufferQueue)
 		             ->RegisterCallback(p->bqPlayerBufferQueue, bqPlayerCallback, p);
-		DEBUG_SND("bqPlayerCallback=%p", (void*)p->bqPlayerCallback);
 		WINPR_ASSERT(!result);
 
 		if (result != SL_RESULT_SUCCESS)
