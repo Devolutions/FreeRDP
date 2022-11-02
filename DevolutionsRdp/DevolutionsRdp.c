@@ -1474,6 +1474,17 @@ void csharp_freerdp_set_load_balance_info(void* instance, const char* info)
 	settings->LoadBalanceInfoLength = (UINT32)strlen((char*) settings->LoadBalanceInfo);
 }
 
+void csharp_freerdp_set_network_connection_type(void* instance, UINT32 connectionType)
+{
+	freerdp* inst = (freerdp*)instance;
+	rdpSettings* settings = inst->context->settings;
+
+	if (connectionType >= CONNECTION_TYPE_MODEM && connectionType <= CONNECTION_TYPE_AUTODETECT)
+	{
+		freerdp_set_connection_type(settings, connectionType);
+	}
+}
+
 void csharp_freerdp_set_performance_flags(void* instance, BOOL disableWallpaper, BOOL allowFontSmoothing, BOOL allowDesktopComposition,
 					  BOOL bitmapCacheEnabled, BOOL disableFullWindowDrag, BOOL disableMenuAnims, BOOL disableThemes)
 {
@@ -1487,6 +1498,14 @@ void csharp_freerdp_set_performance_flags(void* instance, BOOL disableWallpaper,
 	settings->DisableFullWindowDrag = disableFullWindowDrag;
 	settings->DisableMenuAnims = disableMenuAnims;
 	settings->DisableThemes = disableThemes;
+}
+
+void csharp_freerdp_performance_flags_split(void* instance)
+{
+	freerdp* inst = (freerdp*)instance;
+	rdpSettings* settings = inst->context->settings;
+
+	freerdp_performance_flags_split(settings);
 }
 
 void csharp_freerdp_set_audio_quality_mode(void* instance, UINT16 qualityMode)
