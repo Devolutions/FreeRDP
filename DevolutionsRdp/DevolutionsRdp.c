@@ -29,6 +29,44 @@
 #define CRED_MAX_CREDENTIAL_BLOB_SIZE 512
 #endif
 
+#if defined(_WIN64)
+#pragma comment(linker, "/export:ClipboardLock ")
+#pragma comment(linker, "/export:ClipboardUnlock ")
+#pragma comment(linker, "/export:ClipboardEmpty ")
+#pragma comment(linker, "/export:ClipboardCountFormats ")
+#pragma comment(linker, "/export:ClipboardGetFormatIds ")
+#pragma comment(linker, "/export:ClipboardCountRegisteredFormats ")
+#pragma comment(linker, "/export:ClipboardGetRegisteredFormatIds ")
+#pragma comment(linker, "/export:ClipboardRegisterFormat ")
+#pragma comment(linker, "/export:ClipboardRegisterSynthesizer ")
+#pragma comment(linker, "/export:ClipboardGetFormatId ")
+#pragma comment(linker, "/export:ClipboardGetFormatName ")
+#pragma comment(linker, "/export:ClipboardGetData ")
+#pragma comment(linker, "/export:ClipboardSetData ")
+#pragma comment(linker, "/export:ClipboardGetOwner ")
+#pragma comment(linker, "/export:ClipboardSetOwner ")
+#pragma comment(linker, "/export:ClipboardCreate ")
+#pragma comment(linker, "/export:ClipboardDestroy ")
+#elif defined(_WIN32)
+#pragma comment(linker, "/export:_ClipboardLock ")
+#pragma comment(linker, "/export:_ClipboardUnlock ")
+#pragma comment(linker, "/export:_ClipboardEmpty ")
+#pragma comment(linker, "/export:_ClipboardCountFormats ")
+#pragma comment(linker, "/export:_ClipboardGetFormatIds ")
+#pragma comment(linker, "/export:_ClipboardCountRegisteredFormats ")
+#pragma comment(linker, "/export:_ClipboardGetRegisteredFormatIds ")
+#pragma comment(linker, "/export:_ClipboardRegisterFormat ")
+#pragma comment(linker, "/export:_ClipboardRegisterSynthesizer ")
+#pragma comment(linker, "/export:_ClipboardGetFormatId ")
+#pragma comment(linker, "/export:_ClipboardGetFormatName ")
+#pragma comment(linker, "/export:_ClipboardGetData ")
+#pragma comment(linker, "/export:_ClipboardSetData ")
+#pragma comment(linker, "/export:_ClipboardGetOwner ")
+#pragma comment(linker, "/export:_ClipboardSetOwner ")
+#pragma comment(linker, "/export:_ClipboardCreate ")
+#pragma comment(linker, "/export:_ClipboardDestroy ")
+#endif
+
 #define RESIZE_MIN_DELAY 200 /* minimum delay in ms between two resizes */
 
 static BOOL cs_pre_connect(freerdp* instance);
