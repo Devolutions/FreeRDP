@@ -77,6 +77,7 @@ static DWORD cs_verify_certificate(freerdp* instance, const char* host, UINT16 p
                                    const char* common_name, const char* subject, const char* issuer,
                                    const char* fingerprint, DWORD flags);
 static int cs_verify_x509_certificate(freerdp* instance, const BYTE* data, size_t length, const char* hostname, uint16_t port, DWORD flags);
+static int cs_logon_error_info(freerdp* instance, UINT32 data, UINT32 type);
 static char** freerdp_command_line_parse_comma_separated_values_offset(const char* name, char* list, size_t* count);
 static char** freerdp_command_line_parse_comma_separated_values_ex(const char* name, const char* list, size_t* count);
 void cs_error_info(void* ctx, const ErrorInfoEventArgs* e);
@@ -295,6 +296,7 @@ static BOOL cs_context_new(freerdp* instance, rdpContext* context)
 	instance->AuthenticateEx = cs_authenticate;
 	instance->VerifyCertificateEx = cs_verify_certificate;
 	instance->VerifyX509Certificate = cs_verify_x509_certificate;
+	instance->LogonErrorInfo = cs_logon_error_info;
 
 	PubSub_SubscribeErrorInfo(context->pubSub, cs_error_info);
 
@@ -559,6 +561,11 @@ static DWORD cs_verify_certificate(freerdp* instance, const char* host, UINT16 p
 }
 
 static int cs_verify_x509_certificate(freerdp* instance, const BYTE* data, size_t length, const char* hostname, uint16_t port, DWORD flags)
+{
+	return 1;
+}
+
+static int cs_logon_error_info(freerdp* instance, UINT32 data, UINT32 type)
 {
 	return 1;
 }
@@ -1426,6 +1433,13 @@ void csharp_set_on_error(void* instance, fnOnError fn)
 	
 	ctxt->onError = fn;
 }
+ 
+void csharp_set_on_logon_error_info(void* instance, fnLogonErrorInfo fn)
+{
+	freerdp* inst = (freerdp*)instance;
+	
+	inst->LogonErrorInfo = fn;
+}
 
 void csharp_set_on_cursor_notifications(void* instance, fnOnNewCursor newCursor, fnOnFreeCursor freeCursor, fnOnSetCursor setCursor, fnOnDefaultCursor defaultCursor)
 {
@@ -1438,12 +1452,7 @@ void csharp_set_on_cursor_notifications(void* instance, fnOnNewCursor newCursor,
 	csc->onDefaultCursor = defaultCursor;
 }
 
-const char* csharp_get_error_info_string(int code)
-{
-	return freerdp_get_error_info_string(code);
-}
-
-int csharp_get_last_error(void* instance)
+uint32_t csharp_get_last_error(void* instance)
 {
 	freerdp* inst = (freerdp*)instance;
 	rdpContext* ctx = (rdpContext*)inst->context;
