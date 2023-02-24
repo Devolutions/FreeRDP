@@ -40,7 +40,7 @@ FREERDP_LOCAL BOOL credssp_auth_setup_client(rdpCredsspAuth* auth, const char* t
                                              const char* pkinit);
 FREERDP_LOCAL BOOL credssp_auth_setup_server(rdpCredsspAuth* auth);
 FREERDP_LOCAL void credssp_auth_set_flags(rdpCredsspAuth* auth, ULONG flags);
-FREERDP_LOCAL int credssp_auth_authenticate(rdpCredsspAuth* auth);
+FREERDP_LOCAL int credssp_auth_authenticate(rdpCredsspAuth* auth, int* innerErrorCode);
 FREERDP_LOCAL BOOL credssp_auth_encrypt(rdpCredsspAuth* auth, const SecBuffer* plaintext,
                                         SecBuffer* ciphertext, size_t* signature_length,
                                         ULONG sequence);

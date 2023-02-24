@@ -109,6 +109,7 @@ struct rdp_nla
 	UINT32 version;
 	UINT32 peerVersion;
 	UINT32 errorCode;
+	int innerErrorCode;
 
 	/* Lifetime of buffer nla_new -> nla_free */
 	SecBuffer ClientNonce; /* Depending on protocol version a random nonce or a value read from the
@@ -482,7 +483,7 @@ int nla_client_begin(rdpNla* nla)
 	 */
 	credssp_auth_set_flags(nla->auth, ISC_REQ_MUTUAL_AUTH | ISC_REQ_CONFIDENTIALITY);
 
-	const int rc = credssp_auth_authenticate(nla->auth);
+	const int rc = credssp_auth_authenticate(nla->auth, &nla->innerErrorCode);
 
 	switch (rc)
 	{
@@ -509,7 +510,8 @@ int nla_client_begin(rdpNla* nla)
 static int nla_client_recv_nego_token(rdpNla* nla)
 {
 	credssp_auth_take_input_buffer(nla->auth, &nla->negoToken);
-	const int rc = credssp_auth_authenticate(nla->auth);
+
+	const int rc = credssp_auth_authenticate(nla->auth, &nla->innerErrorCode);
 
 	switch (rc)
 	{
@@ -764,7 +766,7 @@ static int nla_server_authenticate(rdpNla* nla)
 		WLog_DBG(TAG, "Receiving Authentication Token");
 		credssp_auth_take_input_buffer(nla->auth, &nla->negoToken);
 
-		res = credssp_auth_authenticate(nla->auth);
+		res = credssp_auth_authenticate(nla->auth, &nla->innerErrorCode);
 
 		if (res == -1)
 		{
@@ -862,10 +864,24 @@ int nla_authenticate(rdpNla* nla)
 {
 	WINPR_ASSERT(nla);
 
+	int status = 0;
+
 	if (nla->server)
-		return nla_server_authenticate(nla);
+		status = nla_server_authenticate(nla);
 	else
-		return nla_client_authenticate(nla);
+		status = nla_client_authenticate(nla);
+
+	if (status < 0)
+	{
+		// check for the Kerberos error
+		DWORD kerberosErrorCode = nla->innerErrorCode;
+		if (kerberosErrorCode != 0)
+		{
+			WLog_ERR(TAG, "Could not complete NLA: get the following Kerberos error: %d", kerberosErrorCode);
+		}
+	}
+
+	return status;
 }
 
 static void ap_integer_increment_le(BYTE* number, size_t size)

@@ -352,7 +352,7 @@ void credssp_auth_set_flags(rdpCredsspAuth* auth, ULONG flags)
  *                                           --------------
  */
 
-int credssp_auth_authenticate(rdpCredsspAuth* auth)
+int credssp_auth_authenticate(rdpCredsspAuth* auth, int* innerErrorCode)
 {
 	SECURITY_STATUS status = ERROR_INTERNAL_ERROR;
 	SecBuffer input_buffers[2] = { 0 };
@@ -441,6 +441,16 @@ int credssp_auth_authenticate(rdpCredsspAuth* auth)
 		WLog_ERR(TAG, "%s failed with %s [0x%08X]",
 		         auth->server ? "AcceptSecurityContext" : "InitializeSecurityContext",
 		         GetSecurityStatusString(status), status);
+
+		DWORD lastError = GetLastError();
+		// if the last error is an application error code. e.g. Kerberos error code in our case
+		// Bit 29 is reserved for application-defined error codes.
+		if (lastError & 0x20000000 && innerErrorCode != NULL)
+		{
+			// clear bit 29 to get pure krb error code
+			*innerErrorCode = lastError & 0xEFFFFFFF;
+		}
+
 		return -1;
 	}
 }
