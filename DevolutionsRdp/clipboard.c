@@ -290,11 +290,8 @@ UINT cs_cliprdr_server_format_data_response(CliprdrClientContext* cliprdr, const
 		formatId = format->formatId;
 
 	size = formatDataResponse->common.dataLen;
-	data = (BYTE*)malloc(size);
-	CopyMemory(data, formatDataResponse->requestedFormatData, size);
 
-	ClipboardSetData(ctx->clipboard, formatId, data, size);
-
+	ClipboardSetData(ctx->clipboard, formatId, formatDataResponse->requestedFormatData, size);
 	SetEvent(ctx->clipboardRequestEvent);
 
 	formatId = ClipboardRegisterFormat(ctx->clipboard, "UTF8_STRING");
