@@ -1460,6 +1460,14 @@ uint32_t csharp_get_last_error(void* instance)
 	return freerdp_get_last_error(ctx);
 }
 
+uint32_t csharp_get_nla_sspi_error(void* instance)
+{
+	freerdp* inst = (freerdp*)instance;
+	rdpContext* ctx = (rdpContext*)inst->context;
+
+	return freerdp_get_nla_sspi_error(ctx);
+}
+
 void csharp_print_message(const char* tag, int level, uint32_t line, 
   const char* file, const char* function, const char* message)
 {
