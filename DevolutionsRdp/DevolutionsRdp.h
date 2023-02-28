@@ -133,6 +133,7 @@ FREERDP_API void csharp_set_on_error(void* instance, fnOnError fn);
 FREERDP_API void csharp_set_on_logon_error_info(void* instance, fnLogonErrorInfo fn);
 FREERDP_API void csharp_set_on_cursor_notifications(void* instance, fnOnNewCursor newCursor, fnOnFreeCursor freeCursor, fnOnSetCursor setCursor, fnOnDefaultCursor defaultCursor);
 FREERDP_API uint32_t csharp_get_last_error(void* instance);
+FREERDP_API uint32_t csharp_get_nla_sspi_error(void* instance);
 FREERDP_API void csharp_print_message(const char* tag, int level, uint32_t line, const char* file, const char* function, const char* message);
 FREERDP_API void csharp_deallocate(void* ptr);
 
