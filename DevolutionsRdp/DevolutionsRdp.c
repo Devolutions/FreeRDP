@@ -351,12 +351,6 @@ static BOOL cs_pre_connect(freerdp* instance)
 	PubSub_SubscribeChannelDisconnected(context->pubSub,
 										(pChannelDisconnectedEventHandler) cs_OnChannelDisconnectedEventHandler);
 
-	if (!context->cache)
-	{
-		if (!(context->cache = cache_new(context)))
-			return FALSE;
-	}
-
 	return TRUE;
 }
 
@@ -478,7 +472,6 @@ static BOOL cs_post_connect(freerdp* instance)
 	update->EndPaint = cs_end_paint;
 	update->DesktopResize = cs_desktop_resize;
 	
-	pointer_cache_register_callbacks(update);
 	cs_register_pointer((rdpContext*)context);
 
 	return TRUE;
@@ -797,7 +790,7 @@ BOOL csharp_freerdp_abort_connect(void* instance)
 {
 	freerdp* inst = (freerdp*)instance;
 
-	return freerdp_abort_connect(inst);
+	return freerdp_abort_connect_context(inst->context);
 }
 
 void csharp_freerdp_set_initial_buffer(void* instance, void* buffer)
@@ -1146,7 +1139,9 @@ void csharp_freerdp_set_scale_factor(void* instance, UINT32 desktopScaleFactor, 
 
 BOOL csharp_shall_disconnect(void* instance)
 {
-	return freerdp_shall_disconnect((freerdp*)instance);
+	freerdp* inst = (freerdp*)instance;
+
+	return freerdp_shall_disconnect_context(inst->context);
 }
 
 BOOL csharp_waitforsingleobject(void* instance)
