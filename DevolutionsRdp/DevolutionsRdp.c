@@ -238,7 +238,7 @@ void cs_OnChannelConnectedEventHandler(rdpContext* context, ChannelConnectedEven
 {
 	csContext* csc = (csContext*)context->instance->context;
 
-	if (csc->channelConnected && csc->channelConnected(context, e->name, e->pInterface))
+	if (csc->channelConnected && csc->channelConnected(context->instance, e->name, e->pInterface))
 	{
 		return;
 	}
