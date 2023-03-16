@@ -1,4 +1,5 @@
 #include "virtualchannel.h"
+#include <freerdp/freerdp.h>
 #include <freerdp/client/channels.h>
 
 #define TAG CHANNELS_TAG("virtual.channel")
