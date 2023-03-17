@@ -78,6 +78,7 @@ static DWORD cs_verify_certificate(freerdp* instance, const char* host, UINT16 p
                                    const char* fingerprint, DWORD flags);
 static int cs_verify_x509_certificate(freerdp* instance, const BYTE* data, size_t length, const char* hostname, uint16_t port, DWORD flags);
 static int cs_logon_error_info(freerdp* instance, UINT32 data, UINT32 type);
+static BOOL cs_present_gateway_message(freerdp* instance, UINT32 type, BOOL isDisplayMandatory, BOOL isConsentMandatory, size_t length, const WCHAR* message);
 static char** freerdp_command_line_parse_comma_separated_values_offset(const char* name, char* list, size_t* count);
 static char** freerdp_command_line_parse_comma_separated_values_ex(const char* name, const char* list, size_t* count);
 void cs_error_info(void* ctx, const ErrorInfoEventArgs* e);
@@ -297,6 +298,7 @@ static BOOL cs_context_new(freerdp* instance, rdpContext* context)
 	instance->VerifyCertificateEx = cs_verify_certificate;
 	instance->VerifyX509Certificate = cs_verify_x509_certificate;
 	instance->LogonErrorInfo = cs_logon_error_info;
+	instance->PresentGatewayMessage = cs_present_gateway_message;
 
 	PubSub_SubscribeErrorInfo(context->pubSub, cs_error_info);
 
@@ -561,6 +563,11 @@ static int cs_verify_x509_certificate(freerdp* instance, const BYTE* data, size_
 static int cs_logon_error_info(freerdp* instance, UINT32 data, UINT32 type)
 {
 	return 1;
+}
+
+static BOOL cs_present_gateway_message(freerdp* instance, UINT32 type, BOOL isDisplayMandatory, BOOL isConsentMandatory, size_t length, const WCHAR* message)
+{
+	return TRUE;
 }
 
 void cs_error_info(void* ctx, const ErrorInfoEventArgs* e)
@@ -1419,6 +1426,13 @@ void csharp_set_on_verify_x509_certificate(void* instance, pVerifyX509Certificat
 	freerdp* inst = (freerdp*)instance;
 	
 	inst->VerifyX509Certificate = fn;
+}
+
+void csharp_set_on_gateway_message(void* instance, pPresentGatewayMessage fn)
+{
+	freerdp* inst = (freerdp*)instance;
+	
+	inst->PresentGatewayMessage = fn;
 }
 
 void csharp_set_on_error(void* instance, fnOnError fn)
