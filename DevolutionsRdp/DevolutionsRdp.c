@@ -318,6 +318,8 @@ static BOOL cs_pre_connect(freerdp* instance)
 	rdpSettings* settings = context->settings;
 	BOOL bitmap_cache = settings->BitmapCacheEnabled;
 	
+	settings->IgnoreInvalidDevices = TRUE;
+
 	ZeroMemory(settings->OrderSupport, 32);
 	settings->OrderSupport[NEG_DSTBLT_INDEX] = TRUE;
 	settings->OrderSupport[NEG_PATBLT_INDEX] = TRUE;
