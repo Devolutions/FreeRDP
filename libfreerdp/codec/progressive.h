@@ -92,7 +92,6 @@ typedef struct
 
 	BYTE flags;
 	BYTE quality;
-	BOOL dirty;
 
 	UINT16 yLen;
 	UINT16 cbLen;
