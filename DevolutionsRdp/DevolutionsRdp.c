@@ -977,7 +977,7 @@ BOOL csharp_freerdp_set_connection_info(void* instance, const char* hostname, co
 	{
 		settings->RemoteFxCodec = TRUE;
 		settings->FastPathOutput = TRUE;
-		settings->LargePointerFlag = TRUE;
+		settings->LargePointerFlag = LARGE_POINTER_FLAG_96x96 | LARGE_POINTER_FLAG_384x384;
 		settings->FrameMarkerCommandEnabled = TRUE;
 		settings->ColorDepth = 32;
 	}
