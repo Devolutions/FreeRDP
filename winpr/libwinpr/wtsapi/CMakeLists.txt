@@ -19,12 +19,7 @@ winpr_module_add(wtsapi.c)
 
 if(WIN32)
 	winpr_module_add(wtsapi_win32.c wtsapi_win32.h)
-
-    find_library(NTDLL
-        NAME ntdll
-        REQUIRED
-    )
-    winpr_library_add_private(${NTDLL})
+	winpr_library_add_private(ntdll)
 endif()
 
 if(BUILD_TESTING)
