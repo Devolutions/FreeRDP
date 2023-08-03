@@ -259,8 +259,8 @@ extern "C"
 #endif
 
 	WINPR_API int winpr_Cipher_BytesToKey(int cipher, WINPR_MD_TYPE md, const void* salt,
-	                                      const void* data, size_t datal, size_t count, void* key,
-	                                      void* iv);
+	                                      const void* data, size_t datal, size_t count, BYTE* key,
+	                                      BYTE* iv);
 
 #ifdef __cplusplus
 }
