@@ -618,7 +618,7 @@ void winpr_Cipher_Free(WINPR_CIPHER_CTX* ctx)
  */
 
 int winpr_Cipher_BytesToKey(int cipher, WINPR_MD_TYPE md, const void* salt, const void* data,
-                            size_t datal, size_t count, void* key, void* iv)
+                            size_t datal, size_t count, BYTE* key, BYTE* iv)
 {
 	/**
 	 * Key and IV generation compatible with OpenSSL EVP_BytesToKey():
@@ -707,7 +707,7 @@ int winpr_Cipher_BytesToKey(int cipher, WINPR_MD_TYPE md, const void* salt, cons
 					break;
 
 				if (key)
-					*(BYTE*)(key++) = md_buf[i];
+					*(key++) = md_buf[i];
 
 				nkey--;
 				i++;
@@ -725,7 +725,7 @@ int winpr_Cipher_BytesToKey(int cipher, WINPR_MD_TYPE md, const void* salt, cons
 					break;
 
 				if (iv)
-					*(BYTE*)(iv++) = md_buf[i];
+					*(iv++) = md_buf[i];
 
 				niv--;
 				i++;
