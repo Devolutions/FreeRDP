@@ -114,6 +114,7 @@ FREERDP_API void csharp_freerdp_send_cursor_event_ex(void* instance, int x, int 
 FREERDP_API void csharp_freerdp_send_input(void* instance, int keycode, BOOL down);
 FREERDP_API BOOL csharp_freerdp_send_monitor_layout(void* instance, uint32_t targetWidth, uint32_t targetHeight);
 FREERDP_API void csharp_freerdp_send_unicode(void* instance, int character);
+FREERDP_API void csharp_freerdp_send_unicode_ex(void* instance, UINT16 character, bool down);
 FREERDP_API DWORD csharp_get_vk_from_keycode(DWORD keycode, DWORD flags);
 FREERDP_API DWORD csharp_get_scancode_from_vk(DWORD keycode, DWORD flags);
 FREERDP_API void csharp_freerdp_send_vkcode(void* instance, int vkcode, BOOL down);
