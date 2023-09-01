@@ -235,6 +235,11 @@ static void cs_send_unicode_key(freerdp* instance, int vk)
 	freerdp_input_send_unicode_keyboard_event(instance->context->input, 0, vk);
 }
 
+static void cs_send_unicode_key_ex(freerdp* instance, UINT16 flags, UINT16 code)
+{
+	freerdp_input_send_unicode_keyboard_event(instance->context->input, flags, code);
+}
+
 void cs_OnChannelConnectedEventHandler(rdpContext* context, ChannelConnectedEventArgs* e)
 {
 	csContext* csc = (csContext*)context->instance->context;
@@ -1206,6 +1211,12 @@ BOOL csharp_check_event_handles(void* instance, void* buffer)
 void csharp_freerdp_send_unicode(void* instance, int character)
 {
 	cs_send_unicode_key((freerdp*)instance, character);
+}
+
+void csharp_freerdp_send_unicode_ex(void* instance, UINT16 character, bool down)
+{
+	UINT16 flags = (down ? KBD_FLAGS_DOWN : KBD_FLAGS_RELEASE);
+	cs_send_unicode_key_ex((freerdp*)instance, flags, character);
 }
 
 void csharp_freerdp_send_vkcode(void* instance, int vkcode, BOOL down)
