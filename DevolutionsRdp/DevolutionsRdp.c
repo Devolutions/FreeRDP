@@ -1213,7 +1213,7 @@ void csharp_freerdp_send_unicode(void* instance, int character)
 	cs_send_unicode_key((freerdp*)instance, character);
 }
 
-void csharp_freerdp_send_unicode_ex(void* instance, UINT16 character, bool down)
+void csharp_freerdp_send_unicode_ex(void* instance, UINT16 character, BOOL down)
 {
 	UINT16 flags = (down ? KBD_FLAGS_DOWN : KBD_FLAGS_RELEASE);
 	cs_send_unicode_key_ex((freerdp*)instance, flags, character);
