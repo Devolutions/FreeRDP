@@ -143,6 +143,8 @@ static wLogAppender* WLog_Appender_New(wLog* log, DWORD logAppenderType)
 		return NULL;
 	}
 
+	WLog_Layout_SetLogAppenderType(log, appender->Layout, logAppenderType);
+
 	InitializeCriticalSectionAndSpinCount(&appender->lock, 4000);
 
 	return appender;
