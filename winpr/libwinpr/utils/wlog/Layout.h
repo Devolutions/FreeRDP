@@ -33,6 +33,8 @@ struct s_wLogLayout
 	LPSTR FormatString;
 };
 
+void WLog_Layout_SetLogAppenderType(wLog* log, wLogLayout* layout, DWORD logAppenderType);
+
 wLogLayout* WLog_Layout_New(wLog* log);
 void WLog_Layout_Free(wLog* log, wLogLayout* layout);
 
