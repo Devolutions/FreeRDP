@@ -35,6 +35,8 @@ struct s_wLogLayout
 
 WINPR_LOCAL void WLog_Layout_Free(wLog* log, wLogLayout* layout);
 
+void WLog_Layout_SetLogAppenderType(wLog* log, wLogLayout* layout, DWORD logAppenderType);
+
 WINPR_ATTR_MALLOC(WLog_Layout_Free, 2)
 WINPR_LOCAL wLogLayout* WLog_Layout_New(wLog* log);
 

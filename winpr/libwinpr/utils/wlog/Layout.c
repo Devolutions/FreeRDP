@@ -369,6 +369,16 @@ BOOL WLog_Layout_SetPrefixFormat(WINPR_ATTR_UNUSED wLog* log, wLogLayout* layout
 	return TRUE;
 }
 
+void WLog_Layout_SetLogAppenderType(wLog* log, wLogLayout* layout, DWORD logAppenderType)
+{
+#ifdef ANDROID
+	if (logAppenderType == WLOG_APPENDER_CONSOLE)
+	{
+		WLog_Layout_SetPrefixFormat(log, layout, "[pid=%pid:tid=%tid] - [%fn]%{[%ctx]%}: ");
+	}
+#endif
+}
+
 wLogLayout* WLog_Layout_New(WINPR_ATTR_UNUSED wLog* log)
 {
 	LPCSTR prefix = "WLOG_PREFIX";
@@ -404,12 +414,8 @@ wLogLayout* WLog_Layout_New(WINPR_ATTR_UNUSED wLog* log)
 		layout->FormatString = env;
 	else
 	{
-#ifdef ANDROID
-		layout->FormatString = _strdup("[pid=%pid:tid=%tid] - [%fn]%{[%ctx]%}: ");
-#else
 		layout->FormatString =
 		    _strdup("[%hr:%mi:%se:%ml] [%pid:%tid] [%lv][%mn] - [%fn]%{[%ctx]%}: ");
-#endif
 
 		if (!layout->FormatString)
 		{
