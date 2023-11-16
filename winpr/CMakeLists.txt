@@ -15,6 +15,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Include our extra modules
+set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../cmake/)
+
 if (NOT FREERDP_UNIFIED_BUILD)
 	cmake_minimum_required(VERSION 3.13)
 	project(WinPR LANGUAGES C)
@@ -115,9 +118,6 @@ include(CheckSymbolExists)
 include(CheckStructHasMember)
 include(TestBigEndian)
 
-# Include our extra modules
-set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../cmake/)
-
 # Check for cmake compatibility (enable/disable features)
 include(CheckCmakeCompat)
 include(FindFeature)
@@ -162,12 +162,12 @@ else()
 endif()
 
 if(MSVC)
- 	include(MSVCRuntime)
- 	if(NOT DEFINED MSVC_RUNTIME)
- 		set(MSVC_RUNTIME "dynamic")
- 	endif()
- 	configure_msvc_runtime()
- endif()
+	include(MSVCRuntime)
+	if(NOT DEFINED MSVC_RUNTIME)
+		set(MSVC_RUNTIME "dynamic")
+	endif()
+	configure_msvc_runtime()
+endif()
 
 if(NOT IOS)
 	CHECK_SYMBOL_EXISTS(strndup string.h WINPR_HAVE_STRNDUP)
