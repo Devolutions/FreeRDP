@@ -229,6 +229,76 @@ endif()
 
 include(ExportAllSymbols)
 
+if(FREEBSD)
+	find_path(EPOLLSHIM_INCLUDE_DIR NAMES sys/epoll.h sys/timerfd.h HINTS /usr/local/include/libepoll-shim)
+	find_library(EPOLLSHIM_LIBS NAMES epoll-shim libepoll-shim HINTS /usr/local/lib)
+endif()
+
+# Configure MSVC Runtime
+if(MSVC)
+	include(MSVCRuntime)
+	if(NOT DEFINED MSVC_RUNTIME)
+		set(MSVC_RUNTIME "dynamic" CACHE STRING "MSVC runtime type [dynamic|static]")
+	endif()
+	if(MSVC_RUNTIME STREQUAL "static")
+		if(BUILD_SHARED_LIBS)
+			message(FATAL_ERROR "Static CRT is only supported in a fully static build")
+		endif()
+		message(STATUS "Use the MSVC static runtime option carefully!")
+		message(STATUS "OpenSSL uses /MD by default, and is very picky")
+		message(STATUS "Random freeing errors are a common sign of runtime issues")
+	endif()
+	configure_msvc_runtime()
+
+	if(NOT DEFINED CMAKE_SUPPRESS_REGENERATION)
+		set(CMAKE_SUPPRESS_REGENERATION ON)
+	endif()
+endif()
+
+# Enable 64bit file support on linux and FreeBSD.
+if("${CMAKE_SYSTEM_NAME}" MATCHES "Linux" OR FREEBSD)
+	add_definitions("-D_FILE_OFFSET_BITS=64")
+endif()
+
+# Use Standard conforming getpwnam_r() on Solaris.
+if("${CMAKE_SYSTEM_NAME}" MATCHES "SunOS")
+	add_definitions("-D_POSIX_PTHREAD_SEMANTICS")
+endif()
+
+# Compiler-specific flags
+if(CMAKE_COMPILER_IS_GNUCC)
+  if(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64" OR CMAKE_SYSTEM_PROCESSOR MATCHES "i686")
+    check_symbol_exists(__x86_64__ "" IS_X86_64)
+    if(IS_X86_64)
+      set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
+    else()
+      set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -march=i686")
+    endif()
+  endif()
+
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall")
+
+  if(NOT EXPORT_ALL_SYMBOLS)
+    message(STATUS "GCC default symbol visibility: hidden")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fvisibility=hidden")
+  endif()
+  check_c_compiler_flag(-Wimplicit-function-declaration Wimplicit-function-declaration)
+  if(Wimplicit-function-declaration)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wimplicit-function-declaration")
+  endif()
+
+  if(NOT OPENBSD)
+    check_c_compiler_flag(-Wredundant-decls Wredundant-decls)
+    if(Wredundant-decls)
+      set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wredundant-decls")
+    endif()
+  endif()
+  add_compile_definitions("$<$<CONFIG:Release>:NDEBUG>")
+  add_compile_definitions("$<$<CONFIG:MinSizeRel>:NDEBUG>")
+  add_compile_options("$<$<CONFIG:RelWithDebInfo>:-g>")
+  add_compile_options("$<$<CONFIG:Debug>:-g>")
+endif()
+
 set(THREAD_PREFER_PTHREAD_FLAG TRUE)
 
 if(NOT IOS)
