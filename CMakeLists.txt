@@ -222,6 +222,27 @@ if(FREEBSD)
 	find_library(EPOLLSHIM_LIBS NAMES epoll-shim libepoll-shim HINTS /usr/local/lib)
 endif()
 
+# Configure MSVC Runtime
+if(MSVC)
+	include(MSVCRuntime)
+	if(NOT DEFINED MSVC_RUNTIME)
+		set(MSVC_RUNTIME "dynamic" CACHE STRING "MSVC runtime type [dynamic|static]")
+	endif()
+	if(MSVC_RUNTIME STREQUAL "static")
+		if(BUILD_SHARED_LIBS)
+			message(FATAL_ERROR "Static CRT is only supported in a fully static build")
+		endif()
+		message(STATUS "Use the MSVC static runtime option carefully!")
+		message(STATUS "OpenSSL uses /MD by default, and is very picky")
+		message(STATUS "Random freeing errors are a common sign of runtime issues")
+	endif()
+	configure_msvc_runtime()
+
+	if(NOT DEFINED CMAKE_SUPPRESS_REGENERATION)
+		set(CMAKE_SUPPRESS_REGENERATION ON)
+	endif()
+endif()
+
 # Enable 64bit file support on linux and FreeBSD.
 if("${CMAKE_SYSTEM_NAME}" MATCHES "Linux" OR FREEBSD)
 	add_definitions("-D_FILE_OFFSET_BITS=64")
