@@ -212,6 +212,42 @@ if (EXPORT_ALL_SYMBOLS)
 	add_definitions(-DEXPORT_ALL_SYMBOLS)
 endif(EXPORT_ALL_SYMBOLS)
 
+if(FREEBSD)
+	find_path(EPOLLSHIM_INCLUDE_DIR NAMES sys/epoll.h sys/timerfd.h HINTS /usr/local/include/libepoll-shim)
+	find_library(EPOLLSHIM_LIBS NAMES epoll-shim libepoll-shim HINTS /usr/local/lib)
+endif()
+
+# Configure MSVC Runtime
+if(MSVC)
+	include(MSVCRuntime)
+	if(NOT DEFINED MSVC_RUNTIME)
+		set(MSVC_RUNTIME "dynamic" CACHE STRING "MSVC runtime type [dynamic|static]")
+	endif()
+	if(MSVC_RUNTIME STREQUAL "static")
+		if(BUILD_SHARED_LIBS)
+			message(FATAL_ERROR "Static CRT is only supported in a fully static build")
+		endif()
+		message(STATUS "Use the MSVC static runtime option carefully!")
+		message(STATUS "OpenSSL uses /MD by default, and is very picky")
+		message(STATUS "Random freeing errors are a common sign of runtime issues")
+	endif()
+	configure_msvc_runtime()
+
+	if(NOT DEFINED CMAKE_SUPPRESS_REGENERATION)
+		set(CMAKE_SUPPRESS_REGENERATION ON)
+	endif()
+endif()
+
+# Enable 64bit file support on linux and FreeBSD.
+if("${CMAKE_SYSTEM_NAME}" MATCHES "Linux" OR FREEBSD)
+	add_definitions("-D_FILE_OFFSET_BITS=64")
+endif()
+
+# Use Standard conforming getpwnam_r() on Solaris.
+if("${CMAKE_SYSTEM_NAME}" MATCHES "SunOS")
+	add_definitions("-D_POSIX_PTHREAD_SEMANTICS")
+endif()
+
 # Compiler-specific flags
 if(CMAKE_COMPILER_IS_GNUCC)
 	if(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64" OR CMAKE_SYSTEM_PROCESSOR MATCHES "i686")
