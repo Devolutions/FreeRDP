@@ -34,8 +34,12 @@
 #endif
 
 #ifdef WITH_MBEDTLS
+#ifdef MBEDTLS_MD4_C
 #include <mbedtls/md4.h>
+#endif
+#ifdef MBEDTLS_MD5_C
 #include <mbedtls/md5.h>
+#endif
 #include <mbedtls/sha1.h>
 #include <mbedtls/md.h>
 #endif
@@ -77,14 +81,6 @@ mbedtls_md_type_t winpr_mbedtls_get_md_type(int md)
 
 	switch (md)
 	{
-		case WINPR_MD_MD2:
-			type = MBEDTLS_MD_MD2;
-			break;
-
-		case WINPR_MD_MD4:
-			type = MBEDTLS_MD_MD4;
-			break;
-
 		case WINPR_MD_MD5:
 			type = MBEDTLS_MD_MD5;
 			break;
@@ -108,10 +104,6 @@ mbedtls_md_type_t winpr_mbedtls_get_md_type(int md)
 		case WINPR_MD_SHA512:
 			type = MBEDTLS_MD_SHA512;
 			break;
-
-		case WINPR_MD_RIPEMD160:
-			type = MBEDTLS_MD_RIPEMD160;
-			break;
 	}
 
 	return type;
@@ -123,9 +115,7 @@ struct hash_map
 	const char* name;
 	WINPR_MD_TYPE md;
 };
-static const struct hash_map hashes[] = { { "md2", WINPR_MD_MD2 },
-	                                      { "md4", WINPR_MD_MD4 },
-	                                      { "md5", WINPR_MD_MD5 },
+static const struct hash_map hashes[] = { { "md5", WINPR_MD_MD5 },
 	                                      { "sha1", WINPR_MD_SHA1 },
 	                                      { "sha224", WINPR_MD_SHA224 },
 	                                      { "sha256", WINPR_MD_SHA256 },
@@ -274,7 +264,7 @@ BOOL winpr_HMAC_Init(WINPR_HMAC_CTX* ctx, WINPR_MD_TYPE md, const void* key, siz
 	if (!md_info || !hmac)
 		return FALSE;
 
-	if (hmac->md_info != md_info)
+	if (mbedtls_md_info_from_ctx(hmac) != md_info)
 	{
 		mbedtls_md_free(hmac); /* can be called at any time after mbedtls_md_init */
 
@@ -514,7 +504,7 @@ static BOOL winpr_Digest_Init_Internal(WINPR_DIGEST_CTX* ctx, WINPR_MD_TYPE md)
 	if (!md_info)
 		return FALSE;
 
-	if (mdctx->md_info != md_info)
+	if (mbedtls_md_info_from_ctx(md_info) != md_info)
 	{
 		mbedtls_md_free(mdctx); /* can be called at any time after mbedtls_md_init */
 
