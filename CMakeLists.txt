@@ -86,15 +86,6 @@ include(GetGitRevisionDescription)
 include(SetFreeRDPCMakeInstallDir)
 include(Doxygen)
 
-option(WITH_INTERPROCEDURAL_OPTIMIZATION "Check for LTO support and enable if available" ON)
-if(WITH_INTERPROCEDURAL_OPTIMIZATION)
-	include(CheckIPOSupported)
-	check_ipo_supported(RESULT supported OUTPUT error)
-	if (supported)
-		option(CMAKE_INTERPROCEDURAL_OPTIMIZATION "Enable LTO linking" TRUE)
-	endif()
-endif()
-
 # Soname versioning
 set(BUILD_NUMBER 0)
 if ($ENV{BUILD_NUMBER})
