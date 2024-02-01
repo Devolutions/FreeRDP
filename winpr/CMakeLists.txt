@@ -137,6 +137,7 @@ include(CheckCCompilerFlag)
 include(InstallFreeRDPMan)
 include(SetFreeRDPCMakeInstallDir)
 include(CMakePackageConfigHelpers)
+include(GetGitRevisionDescription)
 
 if(NOT WIN32)
   add_compile_definitions(WINPR_CRITICAL_SECTION_DISABLE_SPINCOUNT)
