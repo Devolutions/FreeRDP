@@ -147,11 +147,10 @@ static inline UINT32 lzcnt_s(UINT32 x)
 
 		WINPR_ASSERT(n >= x);
 		return n - x;
-#ifndef _M_ARM64
 	}
+#endif
 
 	return __lzcnt(x);
-#endif
 }
 
 int rfx_rlgr_decode(RLGR_MODE mode, const BYTE* WINPR_RESTRICT pSrcData, UINT32 SrcSize,
