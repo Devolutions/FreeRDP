@@ -64,6 +64,26 @@ if(NOT FREERDP_UNIFIED_BUILD)
 
   # MSVC compatibility with system headers
   add_compile_definitions(NONAMELESSUNION)
+	set(BUILD_NUMBER 0)
+	if ($ENV{BUILD_NUMBER})
+		set(BUILD_NUMBER $ENV{BUILD_NUMBER})
+	endif()
+
+	if(NOT DEFINED VENDOR)
+		set(VENDOR "FreeRDP" CACHE STRING "FreeRDP package vendor")
+	endif()
+
+	if(NOT DEFINED PRODUCT)
+		set(PRODUCT "FreeRDP" CACHE STRING "FreeRDP package name")
+	endif()
+
+	if (WIN32)
+		# Set product and vendor for dll and exe version information.
+		set(RC_VERSION_VENDOR ${VENDOR})
+		set(RC_VERSION_PRODUCT ${PRODUCT})
+		set(RC_VERSION_PATCH ${BUILD_NUMBER})
+		set(RC_VERSION_DESCRIPTION "${FREERDP_VERSION_FULL} ${GIT_REVISION} ${CMAKE_WINDOWS_VERSION} ${CMAKE_SYSTEM_PROCESSOR}")
+	endif()
 endif()
 
 if(WIN32 AND NOT UWP)
