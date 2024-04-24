@@ -192,7 +192,7 @@ int cs_vrtchn_init(csContext* ctx, VirtChanContext* virtchan)
 	}
 
 	cs_channel_set_on_received_data(virtchan, ctx->onChannelReceivedData);
-	virtchan->custom = (void*) ctx->_p.instance;
+	virtchan->custom = (void*) ctx->_p.context.instance;
 	return 1;
 }
 
@@ -264,6 +264,13 @@ void cs_OnChannelConnectedEventHandler(rdpContext* context, ChannelConnectedEven
 	{
 		cs_vrtchn_init(csc, (VirtChanContext*) e->pInterface);
 	}
+#if defined(CHANNEL_RDPEI_CLIENT)
+	else if (strcmp(e->name, RDPEI_DVC_CHANNEL_NAME) == 0)
+	{
+		rdpClientContext* cctx = (rdpClientContext*)context;
+		cctx->rdpei = (RdpeiClientContext*)e->pInterface;
+	}
+#endif
 }
 
 void cs_OnChannelDisconnectedEventHandler(rdpContext* context, ChannelDisconnectedEventArgs* e)
@@ -290,6 +297,13 @@ void cs_OnChannelDisconnectedEventHandler(rdpContext* context, ChannelDisconnect
 	{
 		cs_vrtchn_uninit(csc, (VirtChanContext*) e->pInterface);
 	}
+#if defined(CHANNEL_RDPEI_CLIENT)
+	else if (strcmp(e->name, RDPEI_DVC_CHANNEL_NAME) == 0)
+	{
+		rdpClientContext* cctx = (rdpClientContext*)context;
+		cctx->rdpei = NULL;
+	}
+#endif
 }
 
 static BOOL cs_context_new(freerdp* instance, rdpContext* context)
@@ -1707,4 +1721,123 @@ void csharp_freerdp_channel_set_on_received_data(void* instance, fnOnChannelRece
 	csContext* ctx = (csContext*)inst->context;
 
 	ctx->onChannelReceivedData = fn;
+}
+
+BOOL csharp_freerdp_register_pen(void* instance, UINT32 flags, INT32 deviceId, double maxPressure)
+{
+	if ((flags & FREERDP_PEN_REGISTER) == 0)
+	{
+		flags |= FREERDP_PEN_REGISTER;
+	}
+
+	freerdp* inst = (freerdp*)instance;
+	return freerdp_client_handle_pen(inst->context, flags, deviceId, maxPressure);
+}
+
+BOOL csharp_freerdp_is_pen(void* instance, INT32 deviceId)
+{
+	freerdp* inst = (freerdp*)instance;
+	return freerdp_client_is_pen(inst->context, deviceId);
+}
+
+BOOL csharp_freerdp_pen_cancel_all(void* instance)
+{
+	freerdp* inst = (freerdp*)instance;
+	return freerdp_client_pen_cancel_all(inst->context);
+}
+
+BOOL csharp_freerdp_handle_pen(void* instance, UINT32 flags, INT32 deviceId, INT32 x, INT32 y)
+{
+	freerdp* inst = (freerdp*)instance;
+	return freerdp_client_handle_pen(inst->context, flags, deviceId, x, y);
+}
+
+BOOL csharp_freerdp_handle_pen_pressure(void* instance, UINT32 flags, INT32 deviceId, INT32 x, INT32 y, double pressure)
+{
+	freerdp* inst = (freerdp*)instance;
+	return freerdp_client_handle_pen(inst->context, flags, deviceId, x, y, pressure);
+}
+
+BOOL csharp_freerdp_handle_pen_rotation(void* instance, UINT32 flags, INT32 deviceId, INT32 x, INT32 y, UINT32 rotation)
+{
+	freerdp* inst = (freerdp*)instance;
+	return freerdp_client_handle_pen(inst->context, flags, deviceId, x, y, rotation);
+}
+
+BOOL csharp_freerdp_handle_pen_tiltx(void* instance, UINT32 flags, INT32 deviceId, INT32 x, INT32 y, INT32 tiltx)
+{
+	freerdp* inst = (freerdp*)instance;
+	return freerdp_client_handle_pen(inst->context, flags, deviceId, x, y, tiltx);
+}
+
+BOOL csharp_freerdp_handle_pen_tilty(void* instance, UINT32 flags, INT32 deviceId, INT32 x, INT32 y, INT32 tilty)
+{
+	freerdp* inst = (freerdp*)instance;
+	return freerdp_client_handle_pen(inst->context, flags, deviceId, x, y, tilty);
+}
+
+BOOL csharp_freerdp_handle_pen_pressure_rotation(void* instance, UINT32 flags, INT32 deviceId, INT32 x, INT32 y, double pressure, UINT32 rotation)
+{
+	freerdp* inst = (freerdp*)instance;
+	return freerdp_client_handle_pen(inst->context, flags, deviceId, x, y, pressure, rotation);
+}
+
+BOOL csharp_freerdp_handle_pen_pressure_tiltx(void* instance, UINT32 flags, INT32 deviceId, INT32 x, INT32 y, double pressure, INT32 tiltx)
+{
+	freerdp* inst = (freerdp*)instance;
+	return freerdp_client_handle_pen(inst->context, flags, deviceId, x, y, pressure, tiltx);
+}
+
+BOOL csharp_freerdp_handle_pen_pressure_tilty(void* instance, UINT32 flags, INT32 deviceId, INT32 x, INT32 y, double pressure, INT32 tilty)
+{
+	freerdp* inst = (freerdp*)instance;
+	return freerdp_client_handle_pen(inst->context, flags, deviceId, x, y, pressure, tilty);
+}
+
+BOOL csharp_freerdp_handle_pen_rotation_tiltx(void* instance, UINT32 flags, INT32 deviceId, INT32 x, INT32 y, UINT32 rotation, INT32 tiltx)
+{
+	freerdp* inst = (freerdp*)instance;
+	return freerdp_client_handle_pen(inst->context, flags, deviceId, x, y, rotation, tiltx);
+}
+
+BOOL csharp_freerdp_handle_pen_rotation_tilty(void* instance, UINT32 flags, INT32 deviceId, INT32 x, INT32 y, UINT32 rotation, INT32 tilty)
+{
+	freerdp* inst = (freerdp*)instance;
+	return freerdp_client_handle_pen(inst->context, flags, deviceId, x, y, rotation, tilty);
+}
+
+BOOL csharp_freerdp_handle_pen_tiltx_tilty(void* instance, UINT32 flags, INT32 deviceId, INT32 x, INT32 y, INT32 tiltx, INT32 tilty)
+{
+	freerdp* inst = (freerdp*)instance;
+	return freerdp_client_handle_pen(inst->context, flags, deviceId, x, y, tiltx, tilty);
+}
+
+BOOL csharp_freerdp_handle_pen_pressure_rotation_tiltx(void* instance, UINT32 flags, INT32 deviceId, INT32 x, INT32 y, double pressure, UINT32 rotation, INT32 tiltx)
+{
+	freerdp* inst = (freerdp*)instance;
+	return freerdp_client_handle_pen(inst->context, flags, deviceId, x, y, pressure, rotation, tiltx);
+}
+
+BOOL csharp_freerdp_handle_pen_pressure_rotation_tilty(void* instance, UINT32 flags, INT32 deviceId, INT32 x, INT32 y, double pressure, UINT32 rotation, INT32 tilty)
+{
+	freerdp* inst = (freerdp*)instance;
+	return freerdp_client_handle_pen(inst->context, flags, deviceId, x, y, pressure, rotation, tilty);
+}
+
+BOOL csharp_freerdp_handle_pen_pressure_tiltx_tilty(void* instance, UINT32 flags, INT32 deviceId, INT32 x, INT32 y, double pressure, INT32 tiltx, INT32 tilty)
+{
+	freerdp* inst = (freerdp*)instance;
+	return freerdp_client_handle_pen(inst->context, flags, deviceId, x, y, pressure, tiltx, tilty);
+}
+
+BOOL csharp_freerdp_handle_pen_rotation_tiltx_tilty(void* instance, UINT32 flags, INT32 deviceId, INT32 x, INT32 y, UINT32 rotation, INT32 tiltx, INT32 tilty)
+{
+	freerdp* inst = (freerdp*)instance;
+	return freerdp_client_handle_pen(inst->context, flags, deviceId, x, y, rotation, tiltx, tilty);
+}
+
+BOOL csharp_freerdp_handle_pen_pressure_rotation_tiltx_tilty(void* instance, UINT32 flags, INT32 deviceId, INT32 x, INT32 y, double pressure, UINT32 rotation, INT32 tiltx, INT32 tilty)
+{
+	freerdp* inst = (freerdp*)instance;
+	return freerdp_client_handle_pen(inst->context, flags, deviceId, x, y, pressure, rotation, tiltx, tilty);
 }
