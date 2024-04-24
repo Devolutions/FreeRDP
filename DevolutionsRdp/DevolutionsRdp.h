@@ -27,7 +27,7 @@ typedef BOOL (*fnOnAuthenticate)(void* context,
 
 typedef struct csharp_context
 {
-	rdpContext _p;
+	rdpClientContext _p;
 
 	void* buffer;
 	
@@ -149,5 +149,26 @@ FREERDP_API void csharp_freerdp_set_redirect_smartcards(void* instance, BOOL red
 FREERDP_API void csharp_freerdp_create_virtual_channels(void* instance, const char* channelNames);
 FREERDP_API UINT csharp_freerdp_channel_write(void* instance, char* channelName, BSTR message, int size);
 FREERDP_API void csharp_freerdp_channel_set_on_received_data(void* instance, fnOnChannelReceivedData fn);
+
+FREERDP_API BOOL csharp_freerdp_register_pen(void* instance, UINT32 flags, INT32 deviceId, double maxPressure);
+FREERDP_API BOOL csharp_freerdp_is_pen(void* instance, INT32 deviceId);
+FREERDP_API BOOL csharp_freerdp_pen_cancel_all(void* instance);
+FREERDP_API BOOL csharp_freerdp_handle_pen(void* instance, UINT32 flags, INT32 deviceId, INT32 x, INT32 y);
+FREERDP_API BOOL csharp_freerdp_handle_pen_pressure(void* instance, UINT32 flags, INT32 deviceId, INT32 x, INT32 y, double pressure);
+FREERDP_API BOOL csharp_freerdp_handle_pen_rotation(void* instance, UINT32 flags, INT32 deviceId, INT32 x, INT32 y, UINT32 rotation);
+FREERDP_API BOOL csharp_freerdp_handle_pen_tiltx(void* instance, UINT32 flags, INT32 deviceId, INT32 x, INT32 y, INT32 tiltx);
+FREERDP_API BOOL csharp_freerdp_handle_pen_tilty(void* instance, UINT32 flags, INT32 deviceId, INT32 x, INT32 y, INT32 tilty);
+FREERDP_API BOOL csharp_freerdp_handle_pen_pressure_rotation(void* instance, UINT32 flags, INT32 deviceId, INT32 x, INT32 y, double pressure, UINT32 rotation);
+FREERDP_API BOOL csharp_freerdp_handle_pen_pressure_tiltx(void* instance, UINT32 flags, INT32 deviceId, INT32 x, INT32 y, double pressure, INT32 tiltx);
+FREERDP_API BOOL csharp_freerdp_handle_pen_pressure_tilty(void* instance, UINT32 flags, INT32 deviceId, INT32 x, INT32 y, double pressure, INT32 tilty);
+FREERDP_API BOOL csharp_freerdp_handle_pen_rotation_tiltx(void* instance, UINT32 flags, INT32 deviceId, INT32 x, INT32 y, UINT32 rotation, INT32 tiltx);
+FREERDP_API BOOL csharp_freerdp_handle_pen_rotation_tilty(void* instance, UINT32 flags, INT32 deviceId, INT32 x, INT32 y, UINT32 rotation, INT32 tilty);
+FREERDP_API BOOL csharp_freerdp_handle_pen_tiltx_tilty(void* instance, UINT32 flags, INT32 deviceId, INT32 x, INT32 y, INT32 tiltx, INT32 tilty);
+FREERDP_API BOOL csharp_freerdp_handle_pen_pressure_rotation_tiltx(void* instance, UINT32 flags, INT32 deviceId, INT32 x, INT32 y, double pressure, UINT32 rotation, INT32 tiltx);
+FREERDP_API BOOL csharp_freerdp_handle_pen_pressure_rotation_tilty(void* instance, UINT32 flags, INT32 deviceId, INT32 x, INT32 y, double pressure, UINT32 rotation, INT32 tilty);
+FREERDP_API BOOL csharp_freerdp_handle_pen_pressure_tiltx_tilty(void* instance, UINT32 flags, INT32 deviceId, INT32 x, INT32 y, double pressure, INT32 tiltx, INT32 tilty);
+FREERDP_API BOOL csharp_freerdp_handle_pen_rotation_tiltx_tilty(void* instance, UINT32 flags, INT32 deviceId, INT32 x, INT32 y, UINT32 rotation, INT32 tiltx, INT32 tilty);
+FREERDP_API BOOL csharp_freerdp_handle_pen_pressure_rotation_tiltx_tilty(void* instance, UINT32 flags, INT32 deviceId, INT32 x, INT32 y, double pressure, UINT32 rotation, INT32 tiltx, INT32 tilty);
+
 
 #endif /* CS_DEVOLUTIONSRDP_H_ */
