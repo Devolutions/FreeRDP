@@ -131,7 +131,7 @@ if(NOT IOS)
     endif()
 endif()
 
-check_function_exists(pthread_setschedprio PTHREAD_SETSCHEDPRIO)
+check_symbol_exists(pthread_setschedprio pthread.h PTHREAD_SETSCHEDPRIO)
 if (PTHREAD_SETSCHEDPRIO)
 	winpr_definition_add(-DPTHREAD_SETSCHEDPRIO)
 endif()
