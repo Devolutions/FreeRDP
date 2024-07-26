@@ -17,7 +17,7 @@ BOOL csharp_create_shared_buffer(char* name, int size)
 	int desc = shm_open(name, O_RDWR | O_CREAT | O_EXCL, 0600);
 	
 	if(desc < 0)
-		return NULL;
+		return result;
 	
 	if (ftruncate(desc, size) == 0)
 		result = TRUE;
