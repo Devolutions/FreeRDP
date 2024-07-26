@@ -270,6 +270,9 @@ error_out:
 	return FALSE;
 }
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wincompatible-function-pointer-types"
+
 BOOL VCAPITYPE rdpvirt_jump_VirtualChannelEntryEx(PCHANNEL_ENTRY_POINTS pEntryPoints, PVOID pInitHandle)
 {
 	return rdpvirt_VirtualChannelEntryEx(pEntryPoints, pInitHandle, "RDMJump");
@@ -309,6 +312,8 @@ PVIRTUALCHANNELENTRY cs_channels_load_static_addin_entry(LPCSTR pszName, LPCSTR 
 
 	return NULL;
 }
+
+#pragma clang diagnostic pop
 
 UINT cs_channel_write(VirtChanContext* context, BSTR message, int size)
 {
