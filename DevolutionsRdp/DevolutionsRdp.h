@@ -62,6 +62,8 @@ typedef struct csharp_context
 	UINT64 lastSentDate;
 	/* Other */
 	UINT16 audioQuality;
+	UINT16 audioFormat;
+	char* audioSubsystem;
 } csContext;
 
 FREERDP_API BOOL csharp_configure_log_callback(int wlogLevel, wLogCallbackMessage_t fn);
@@ -101,6 +103,8 @@ FREERDP_API void csharp_freerdp_set_performance_flags(void* instance,
 FREERDP_API void csharp_freerdp_performance_flags_split(void* instance);
 FREERDP_API void csharp_freerdp_set_network_connection_type(void* instance, UINT32 connectionType);
 FREERDP_API void csharp_freerdp_set_audio_quality_mode(void* instance, UINT16 qualityMode);
+FREERDP_API void csharp_freerdp_set_audio_format(void* instance, UINT16 formatTag);
+FREERDP_API void csharp_freerdp_set_audio_subsystem(void* instance, char* subsystem);
 FREERDP_API void csharp_freerdp_set_tcpacktimeout(void* instance, UINT32 value);
 FREERDP_API BOOL csharp_freerdp_set_value_for_name(void* settings, const char* name, const char* value);
 FREERDP_API BOOL csharp_shall_disconnect(void* instance);
