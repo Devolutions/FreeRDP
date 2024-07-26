@@ -323,12 +323,19 @@ static BOOL cs_context_new(freerdp* instance, rdpContext* context)
 
 	settings->AsyncUpdate = FALSE;
 
+	csContext* csc = (csContext*) instance->context;
+
+#if defined(WITH_ALSA)
+	csc->audioFormat = 1;
+	csharp_freerdp_set_audio_subsystem(instance, "alsa");
+#endif
+
 	return TRUE;
 }
 
 static void cs_context_free(freerdp* instance, rdpContext* context)
 {
-
+	csharp_freerdp_set_audio_subsystem(instance, NULL);
 }
 
 static BOOL cs_pre_connect(freerdp* instance)
@@ -923,6 +930,7 @@ void csharp_freerdp_set_redirect_audio(void* instance, int redirectSound, BOOL r
 	rdpSettings* settings = inst->context->settings;
 	csContext* csc = (csContext*) inst->context;
 	char rdpSndCli[10] = { 0 };
+	char* rdpAudinCli = NULL;
 
 	char** p;
 	size_t count;
@@ -947,9 +955,19 @@ void csharp_freerdp_set_redirect_audio(void* instance, int redirectSound, BOOL r
 
 	if (redirectCapture)
 	{
-		p = freerdp_command_line_parse_comma_separated_values_offset("audin", NULL, &count);
+		if (csc->audioFormat > 0 && csc->audioSubsystem)
+		{
+			const char* format = "sys:%s,format:%d";
+			int sz = snprintf(NULL, 0, format, csc->audioSubsystem, csc->audioFormat);
+			rdpAudinCli = malloc(sz + 1);
+			sprintf(rdpAudinCli, format, csc->audioSubsystem, csc->audioFormat);
+		}
+
+		p = freerdp_command_line_parse_comma_separated_values_offset("audin", rdpAudinCli, &count);
+
 		freerdp_client_add_dynamic_channel(settings, count, p);
 		free(p);
+		free(rdpAudinCli);
 	}
 }
 
@@ -1610,6 +1628,31 @@ void csharp_freerdp_set_audio_quality_mode(void* instance, UINT16 qualityMode)
 	csContext* csc = (csContext*)inst->context;
 
 	csc->audioQuality = qualityMode;
+}
+
+void csharp_freerdp_set_audio_format(void* instance, UINT16 formatTag)
+{
+	freerdp* inst = (freerdp*)instance;
+	csContext* csc = (csContext*)inst->context;
+
+	csc->audioFormat = formatTag;
+}
+
+void csharp_freerdp_set_audio_subsystem(void* instance, char* subsystem)
+{
+	freerdp* inst = (freerdp*)instance;
+	csContext* csc = (csContext*)inst->context;
+
+	if (csc->audioSubsystem)
+	{
+		free(csc->audioSubsystem);
+		csc->audioSubsystem = NULL;
+	}
+
+	if (subsystem)
+	{
+		csc->audioSubsystem = _strdup(subsystem);
+	}
 }
 
 void csharp_freerdp_set_tcpacktimeout(void* instance, UINT32 value)
