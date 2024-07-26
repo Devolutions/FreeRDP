@@ -57,7 +57,7 @@ void cs_Pointer_Free(rdpContext* context, rdpPointer* pointer)
 		free(cursor_data);
 }
 
-BOOL cs_Pointer_Set(rdpContext* context, const rdpPointer* pointer)
+BOOL cs_Pointer_Set(rdpContext* context, rdpPointer* pointer)
 {
 	csContext* csc = (csContext*) context;
 	
