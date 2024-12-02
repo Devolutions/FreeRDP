@@ -152,8 +152,8 @@ if(NOT IOS)
 endif()
 
 check_function_exists(pthread_setschedprio PTHREAD_SETSCHEDPRIO)
-if(PTHREAD_SETSCHEDPRIO)
-  winpr_definition_add(PTHREAD_SETSCHEDPRIO)
+if(PTHREAD_SETSCHEDPRIO AND NOT IOS)
+  winpr_definition_add(-DPTHREAD_SETSCHEDPRIO)
 endif()
 
 if(ANDROID)
