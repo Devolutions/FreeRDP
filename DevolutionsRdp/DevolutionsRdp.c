@@ -971,6 +971,40 @@ void csharp_freerdp_set_redirect_audio(void* instance, int redirectSound, BOOL r
 	}
 }
 
+uint32_t csharp_freerdp_set_desktop_width(void* instance, uint32_t desktopWidth)
+{
+	freerdp* inst = (freerdp*)instance;
+	rdpSettings* settings = inst->context->settings;
+
+	settings->DesktopWidth = desktopWidth;
+
+	if (settings->DesktopWidth < 200)
+		settings->DesktopWidth = 200;
+
+	if (settings->DesktopWidth > 8192)
+		settings->DesktopWidth = 8192;
+
+	settings->DesktopWidth -= (settings->DesktopWidth % 4);
+
+	return settings->DesktopWidth;
+}
+
+uint32_t csharp_freerdp_set_desktop_height(void* instance, uint32_t desktopHeight)
+{
+	freerdp* inst = (freerdp*)instance;
+	rdpSettings* settings = inst->context->settings;
+
+	settings->DesktopHeight = desktopHeight;
+
+	if (settings->DesktopHeight < 200)
+		settings->DesktopHeight = 200;
+
+	if (settings->DesktopHeight > 8192)
+		settings->DesktopHeight = 8192;
+
+	return settings->DesktopHeight;
+}
+
 BOOL csharp_freerdp_set_connection_info(void* instance, const char* hostname, const char* username, const char* password, const char* domain, UINT32 width, UINT32 height, UINT32 color_depth, UINT32 port, int codecLevel)
 {
 	freerdp* inst = (freerdp*)instance;
@@ -981,11 +1015,6 @@ BOOL csharp_freerdp_set_connection_info(void* instance, const char* hostname, co
 	settings->ColorDepth = color_depth;
 	settings->ServerPort = port;
 	settings->ExternalCertificateManagement = TRUE;
-
-	// Hack for 16 bit RDVH connections:
-	//   In this case we get screen corruptions when we have an odd screen resolution width ... need to investigate what is causing this...
-	if (color_depth <= 16)
-		settings->DesktopWidth &= (~1);
 
 	if (!(settings->ServerHostname = _strdup(hostname)))
 		goto out_fail_strdup;
@@ -1031,6 +1060,19 @@ BOOL csharp_freerdp_set_connection_info(void* instance, const char* hostname, co
 
 out_fail_strdup:
 	return FALSE;
+}
+
+BOOL csharp_freerdp_set_connection_info_ex(void* instance, const char* hostname,
+                                           const char* username, const char* password,
+                                           const char* domain, UINT32 color_depth, UINT32 port,
+                                           int codecLevel)
+{
+	freerdp* inst = (freerdp*)instance;
+	rdpSettings* settings = inst->context->settings;
+
+	return csharp_freerdp_set_connection_info(instance, hostname, username, password, domain,
+	                                          settings->DesktopWidth, settings->DesktopHeight,
+	                                          color_depth, port, codecLevel);
 }
 
 void csharp_freerdp_set_security_info(void* instance, BOOL useTLS, BOOL useNLA, BOOL useRDP)
