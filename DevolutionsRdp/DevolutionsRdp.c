@@ -18,6 +18,7 @@
 #include "DevolutionsRdp.h"
 #include "clipboard.h"
 #include "cursor.h"
+#include "headless.h"
 #include "virtualchannel.h"
 
 #define TAG "DevolutionsRdp"
