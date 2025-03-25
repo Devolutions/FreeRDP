@@ -14,6 +14,7 @@ set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH};${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 set(${MODULE_PREFIX}_HEADERS
 	clipboard.h
 	cursor.h
+	headless.h
 	virtualchannel.h
 	DevolutionsRdp.h)
 
