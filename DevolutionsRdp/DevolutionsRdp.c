@@ -14,6 +14,7 @@
 #include <winpr/environment.h>
 #include <winpr/string.h>
 #include <winpr/sysinfo.h>
+#include <openssl/tls1.h>
 
 #include "DevolutionsRdp.h"
 #include "clipboard.h"
@@ -330,6 +331,8 @@ static BOOL cs_context_new(freerdp* instance, rdpContext* context)
 	csc->audioFormat = 1;
 	csharp_freerdp_set_audio_subsystem(instance, "alsa");
 #endif
+	
+	freerdp_settings_set_uint16(settings, FreeRDP_TLSMaxVersion, TLS1_2_VERSION);
 
 	return TRUE;
 }
