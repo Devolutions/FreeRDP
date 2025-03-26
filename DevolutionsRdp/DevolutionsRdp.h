@@ -184,5 +184,24 @@ FREERDP_API BOOL csharp_freerdp_handle_pen_pressure_tiltx_tilty(void* instance, 
 FREERDP_API BOOL csharp_freerdp_handle_pen_rotation_tiltx_tilty(void* instance, UINT32 flags, INT32 deviceId, INT32 x, INT32 y, UINT32 rotation, INT32 tiltx, INT32 tilty);
 FREERDP_API BOOL csharp_freerdp_handle_pen_pressure_rotation_tiltx_tilty(void* instance, UINT32 flags, INT32 deviceId, INT32 x, INT32 y, double pressure, UINT32 rotation, INT32 tiltx, INT32 tilty);
 
+FREERDP_API void csharp_winpr_clipboard_lock(wClipboard* clipboard);
+FREERDP_API void csharp_winpr_clipboard_unlock(wClipboard* clipboard);
+FREERDP_API BOOL csharp_winpr_clipboard_empty(wClipboard* clipboard);
+FREERDP_API UINT32 csharp_winpr_clipboard_count_formats(wClipboard* clipboard);
+FREERDP_API UINT32 csharp_winpr_clipboard_get_format_ids(wClipboard* clipboard, UINT32** ppFormatIds);
+FREERDP_API UINT32 csharp_winpr_clipboard_count_registered_formats(wClipboard* clipboard);
+FREERDP_API UINT32 csharp_winpr_clipboard_get_registered_format_ids(wClipboard* clipboard, UINT32** ppFormatIds);
+FREERDP_API UINT32 csharp_winpr_clipboard_register_format(wClipboard* clipboard, const char* name);
+FREERDP_API BOOL csharp_winpr_clipboard_register_synthesizer(wClipboard* clipboard, UINT32 formatId, UINT32 syntheticId, CLIPBOARD_SYNTHESIZE_FN pfnSynthesize);
+FREERDP_API UINT32 csharp_winpr_clipboard_get_format_id(wClipboard* clipboard, const char* name);
+FREERDP_API const char* csharp_winpr_clipboard_get_format_name(wClipboard* clipboard, UINT32 formatId);
+FREERDP_API void* csharp_winpr_clipboard_get_data(wClipboard* clipboard, UINT32 formatId, UINT32* pSize);
+FREERDP_API BOOL csharp_winpr_clipboard_set_data(wClipboard* clipboard, UINT32 formatId, const void* data, UINT32 size);
+FREERDP_API UINT64 csharp_winpr_clipboard_get_owner(wClipboard* clipboard);
+FREERDP_API void csharp_winpr_clipboard_set_owner(wClipboard* clipboard, UINT64 ownerId);
+FREERDP_API wClipboardDelegate* csharp_winpr_clipboard_get_delegate(wClipboard* clipboard);
+FREERDP_API wClipboard* csharp_winpr_clipboard_create();
+FREERDP_API void csharp_winpr_clipboard_destroy(wClipboard* clipboard);
+FREERDP_API const char* csharp_winpr_clipboard_get_format_id_string(UINT32 formatId);
 
 #endif /* CS_DEVOLUTIONSRDP_H_ */

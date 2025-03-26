@@ -31,44 +31,6 @@
 #define CRED_MAX_CREDENTIAL_BLOB_SIZE 512
 #endif
 
-#if defined(_WIN64)
-#pragma comment(linker, "/export:ClipboardLock ")
-#pragma comment(linker, "/export:ClipboardUnlock ")
-#pragma comment(linker, "/export:ClipboardEmpty ")
-#pragma comment(linker, "/export:ClipboardCountFormats ")
-#pragma comment(linker, "/export:ClipboardGetFormatIds ")
-#pragma comment(linker, "/export:ClipboardCountRegisteredFormats ")
-#pragma comment(linker, "/export:ClipboardGetRegisteredFormatIds ")
-#pragma comment(linker, "/export:ClipboardRegisterFormat ")
-#pragma comment(linker, "/export:ClipboardRegisterSynthesizer ")
-#pragma comment(linker, "/export:ClipboardGetFormatId ")
-#pragma comment(linker, "/export:ClipboardGetFormatName ")
-#pragma comment(linker, "/export:ClipboardGetData ")
-#pragma comment(linker, "/export:ClipboardSetData ")
-#pragma comment(linker, "/export:ClipboardGetOwner ")
-#pragma comment(linker, "/export:ClipboardSetOwner ")
-#pragma comment(linker, "/export:ClipboardCreate ")
-#pragma comment(linker, "/export:ClipboardDestroy ")
-#elif defined(_WIN32)
-#pragma comment(linker, "/export:_ClipboardLock ")
-#pragma comment(linker, "/export:_ClipboardUnlock ")
-#pragma comment(linker, "/export:_ClipboardEmpty ")
-#pragma comment(linker, "/export:_ClipboardCountFormats ")
-#pragma comment(linker, "/export:_ClipboardGetFormatIds ")
-#pragma comment(linker, "/export:_ClipboardCountRegisteredFormats ")
-#pragma comment(linker, "/export:_ClipboardGetRegisteredFormatIds ")
-#pragma comment(linker, "/export:_ClipboardRegisterFormat ")
-#pragma comment(linker, "/export:_ClipboardRegisterSynthesizer ")
-#pragma comment(linker, "/export:_ClipboardGetFormatId ")
-#pragma comment(linker, "/export:_ClipboardGetFormatName ")
-#pragma comment(linker, "/export:_ClipboardGetData ")
-#pragma comment(linker, "/export:_ClipboardSetData ")
-#pragma comment(linker, "/export:_ClipboardGetOwner ")
-#pragma comment(linker, "/export:_ClipboardSetOwner ")
-#pragma comment(linker, "/export:_ClipboardCreate ")
-#pragma comment(linker, "/export:_ClipboardDestroy ")
-#endif
-
 #define RESIZE_MIN_DELAY 200 /* minimum delay in ms between two resizes */
 
 static BOOL cs_pre_connect(freerdp* instance);
@@ -2031,4 +1993,99 @@ BOOL csharp_freerdp_handle_pen_pressure_rotation_tiltx_tilty(void* instance, UIN
 		return FALSE;
 	
 	return freerdp_client_handle_pen(inst->context, flags, deviceId, x, y, pressure, rotation, tiltx, tilty);
+}
+
+void csharp_winpr_clipboard_lock(wClipboard* clipboard)
+{
+	ClipboardLock(clipboard);
+}
+
+void csharp_winpr_clipboard_unlock(wClipboard* clipboard)
+{
+	ClipboardUnlock(clipboard);
+}
+
+BOOL csharp_winpr_clipboard_empty(wClipboard* clipboard)
+{
+	return ClipboardEmpty(clipboard);
+}
+
+UINT32 csharp_winpr_clipboard_count_formats(wClipboard* clipboard)
+{
+	return ClipboardCountFormats(clipboard);
+}
+
+UINT32 csharp_winpr_clipboard_get_format_ids(wClipboard* clipboard, UINT32** ppFormatIds)
+{
+	return ClipboardGetFormatIds(clipboard, ppFormatIds);
+}
+
+UINT32 csharp_winpr_clipboard_count_registered_formats(wClipboard* clipboard)
+{
+	return ClipboardCountRegisteredFormats(clipboard);
+}
+
+UINT32 csharp_winpr_clipboard_get_registered_format_ids(wClipboard* clipboard, UINT32** ppFormatIds)
+{
+	return ClipboardGetRegisteredFormatIds(clipboard, ppFormatIds);
+}
+
+UINT32 csharp_winpr_clipboard_register_format(wClipboard* clipboard, const char* name)
+{
+	return ClipboardRegisterFormat(clipboard, name);
+}
+
+BOOL csharp_winpr_clipboard_register_synthesizer(wClipboard* clipboard, UINT32 formatId, UINT32 syntheticId, CLIPBOARD_SYNTHESIZE_FN pfnSynthesize)
+{
+	return ClipboardRegisterSynthesizer(clipboard, formatId, syntheticId, pfnSynthesize);
+}
+
+UINT32 csharp_winpr_clipboard_get_format_id(wClipboard* clipboard, const char* name)
+{
+	return ClipboardGetFormatId(clipboard, name);
+}
+
+const char* csharp_winpr_clipboard_get_format_name(wClipboard* clipboard, UINT32 formatId)
+{
+	return ClipboardGetFormatName(clipboard, formatId);
+}
+
+void* csharp_winpr_clipboard_get_data(wClipboard* clipboard, UINT32 formatId, UINT32* pSize)
+{
+	return ClipboardGetData(clipboard, formatId, pSize);
+}
+
+BOOL csharp_winpr_clipboard_set_data(wClipboard* clipboard, UINT32 formatId, const void* data, UINT32 size)
+{
+	return ClipboardSetData(clipboard, formatId, data, size);
+}
+
+UINT64 csharp_winpr_clipboard_get_owner(wClipboard* clipboard)
+{
+	return ClipboardGetOwner(clipboard);
+}
+
+void csharp_winpr_clipboard_set_owner(wClipboard* clipboard, UINT64 ownerId)
+{
+	ClipboardSetOwner(clipboard, ownerId);
+}
+
+wClipboardDelegate* csharp_winpr_clipboard_get_delegate(wClipboard* clipboard)
+{
+	return ClipboardGetDelegate(clipboard);
+}
+
+wClipboard* csharp_winpr_clipboard_create()
+{
+	return ClipboardCreate();
+}
+
+void csharp_winpr_clipboard_destroy(wClipboard* clipboard)
+{
+	ClipboardDestroy(clipboard);
+}
+
+const char* csharp_winpr_clipboard_get_format_id_string(UINT32 formatId)
+{
+	return ClipboardGetFormatIdString(formatId);
 }
