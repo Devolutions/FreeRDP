@@ -363,8 +363,13 @@ static long bio_rdp_tls_ctrl(BIO* bio, int cmd, long num, void* ptr)
 			BIO_clear_retry_flags(bio);
 			status = BIO_ctrl(ssl_wbio, cmd, num, ptr);
 			if (status != 1)
-				WLog_DBG(TAG, "BIO_ctrl returned %ld", status);
-			BIO_copy_next_retry(bio);
+				WLog_DBG(TAG, "BIO_ctrl returned %d", status);
+
+			if (next_bio)
+			{
+				BIO_copy_next_retry(bio);
+			}
+
 			status = 1;
 			break;
 
