@@ -437,7 +437,8 @@ static long bio_rdp_tls_ctrl(BIO* bio, int cmd, long num, void* ptr)
 			 * so it must be serialized with them by the same lock. */
 			EnterCriticalSection(&tls->lock);
 			status = BIO_ctrl(ssl_wbio, cmd, num, ptr);
-			BIO_copy_next_retry(bio);
+			if (next_bio)
+				BIO_copy_next_retry(bio);
 			LeaveCriticalSection(&tls->lock);
 			if (status != 1)
 				WLog_DBG(TAG, "BIO_ctrl returned %ld", status);
