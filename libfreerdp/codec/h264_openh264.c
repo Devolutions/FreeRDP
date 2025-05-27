@@ -68,6 +68,46 @@ static const char* openh264_library_names[] = {
 	"libopenh264.so.7",     "libopenh264.so.2.5.0", "libopenh264.so.2.4.1", "libopenh264.so.2.4.0",
 	"libopenh264.so.2.3.1", "libopenh264.so.2.3.0", "libopenh264.so",
 
+	static char* openh264_library_path_from_environment(void* ctx, const char* name)
+	{ 
+		char* env = NULL;
+
+		WINPR_ASSERT(name);
+
+		H264_CONTEXT* h264 = ctx;
+		WINPR_ASSERT(h264);
+
+		if (!name)
+		{
+			WLog_INFO(h264->log, "%s - environment variable name empty", name);
+			return env;
+		}
+
+		const DWORD size = GetEnvironmentVariableX(name, env, 0);
+
+		if (size <= 1)
+		{
+			WLog_DEBUG(h264->log, "no environment variable '%s'", name);
+			return env;
+		}
+
+		env = calloc(size, sizeof(char));
+
+		if (!env)
+			return env;
+
+		const DWORD rc = GetEnvironmentVariableX(name, env, size);
+
+		if (rc != size - 1)
+		{
+			WLog_ERR(h264->log, "environment variable '%s' invalid size", name);
+
+			free(env);
+			env = NULL;
+		}
+
+		return env;
+	}
 #endif
 };
 #endif
@@ -534,14 +574,23 @@ static BOOL openh264_init(H264_CONTEXT* h264)
 
 	h264->pSystemData = (void*)sysContexts;
 #if defined(WITH_OPENH264_LOADING)
+	char* openh264_path_from_env = openh264_library_path_from_environment(h264, "FREERDP_OPENH264_LIBRARY_PATH");
 
-	for (size_t i = 0; i < ARRAYSIZE(openh264_library_names); i++)
+	if (openh264_path_from_env)
 	{
-		const char* current = openh264_library_names[i];
-		success = openh264_load_functionpointers(h264, current);
+		success = openh264_load_functionpointers(h264, openh264_path_from_env);
+		free(openh264_path_from_env);
+	}
+	else
+	{
+		for (size_t i = 0; i < ARRAYSIZE(openh264_library_names); i++)
+		{
+			const char* current = openh264_library_names[i];
+			success = openh264_load_functionpointers(h264, current);
 
-		if (success)
-			break;
+			if (success)
+				break;
+		}
 	}
 
 	if (!success)
