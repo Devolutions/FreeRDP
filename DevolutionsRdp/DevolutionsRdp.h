@@ -164,6 +164,8 @@ FREERDP_API void csharp_freerdp_create_virtual_channels(void* instance, const ch
 FREERDP_API UINT csharp_freerdp_channel_write(void* instance, char* channelName, BSTR message, int size);
 FREERDP_API void csharp_freerdp_channel_set_on_received_data(void* instance, fnOnChannelReceivedData fn);
 
+FREERDP_API BOOL csharp_freerdp_client_handle_touch(void* instance, UINT32 flags, INT32 finger, UINT32 pressure, INT32 x, INT32 y);
+
 FREERDP_API BOOL csharp_freerdp_register_pen(void* instance, UINT32 flags, INT32 deviceId, double maxPressure);
 FREERDP_API BOOL csharp_freerdp_is_pen(void* instance, INT32 deviceId);
 FREERDP_API BOOL csharp_freerdp_pen_cancel_all(void* instance);
