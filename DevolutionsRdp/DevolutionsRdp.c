@@ -1774,6 +1774,18 @@ void csharp_freerdp_channel_set_on_received_data(void* instance, fnOnChannelRece
 	ctx->onChannelReceivedData = fn;
 }
 
+BOOL csharp_freerdp_client_handle_touch(void* instance, UINT32 flags, INT32 finger, UINT32 pressure, INT32 x, INT32 y)
+{
+	freerdp* inst = (freerdp*)instance;
+	csContext* csc = (csContext*)inst->context;
+	RdpeiClientContext* rdpei = csc->_p.rdpei;
+
+	if (!rdpei)
+		return FALSE;
+
+	return csharp_freerdp_client_handle_touch(&csc->_p, flags, finger, pressure, x, y);
+}
+
 BOOL csharp_freerdp_register_pen(void* instance, UINT32 flags, INT32 deviceId, double maxPressure)
 {
 	if ((flags & FREERDP_PEN_REGISTER) == 0)
@@ -1782,13 +1794,15 @@ BOOL csharp_freerdp_register_pen(void* instance, UINT32 flags, INT32 deviceId, d
 	}
 
 	freerdp* inst = (freerdp*)instance;
-	return freerdp_client_handle_pen(inst->context, flags, deviceId, maxPressure);
+	csContext* csc = (csContext*)inst->context;
+	return freerdp_client_handle_pen(&csc->_p, flags, deviceId, maxPressure);
 }
 
 BOOL csharp_freerdp_is_pen(void* instance, INT32 deviceId)
 {
 	freerdp* inst = (freerdp*)instance;
-	return freerdp_client_is_pen(inst->context, deviceId);
+	csContext* csc = (csContext*)inst->context;
+	return freerdp_client_is_pen(&csc->_p, deviceId);
 }
 
 BOOL csharp_freerdp_pen_cancel_all(void* instance)
@@ -1800,7 +1814,7 @@ BOOL csharp_freerdp_pen_cancel_all(void* instance)
 	if (!rdpei)
 		return FALSE;
 
-	return freerdp_client_pen_cancel_all(inst->context);
+	return freerdp_client_pen_cancel_all(&csc->_p);
 }
 
 BOOL csharp_freerdp_handle_pen(void* instance, UINT32 flags, INT32 deviceId, INT32 x, INT32 y)
@@ -1812,7 +1826,7 @@ BOOL csharp_freerdp_handle_pen(void* instance, UINT32 flags, INT32 deviceId, INT
 	if (!rdpei)
 		return FALSE;
 
-	return freerdp_client_handle_pen(inst->context, flags, deviceId, x, y);
+	return freerdp_client_handle_pen(&csc->_p, flags, deviceId, x, y);
 }
 
 BOOL csharp_freerdp_handle_pen_pressure(void* instance, UINT32 flags, INT32 deviceId, INT32 x, INT32 y, double pressure)
@@ -1824,7 +1838,7 @@ BOOL csharp_freerdp_handle_pen_pressure(void* instance, UINT32 flags, INT32 devi
 	if (!rdpei)
 		return FALSE;
 
-	return freerdp_client_handle_pen(inst->context, flags, deviceId, x, y, pressure);
+	return freerdp_client_handle_pen(&csc->_p, flags, deviceId, x, y, pressure);
 }
 
 BOOL csharp_freerdp_handle_pen_rotation(void* instance, UINT32 flags, INT32 deviceId, INT32 x, INT32 y, UINT32 rotation)
@@ -1836,7 +1850,7 @@ BOOL csharp_freerdp_handle_pen_rotation(void* instance, UINT32 flags, INT32 devi
 	if (!rdpei)
 		return FALSE;
 
-	return freerdp_client_handle_pen(inst->context, flags, deviceId, x, y, rotation);
+	return freerdp_client_handle_pen(&csc->_p, flags, deviceId, x, y, rotation);
 }
 
 BOOL csharp_freerdp_handle_pen_tiltx(void* instance, UINT32 flags, INT32 deviceId, INT32 x, INT32 y, INT32 tiltx)
@@ -1848,7 +1862,7 @@ BOOL csharp_freerdp_handle_pen_tiltx(void* instance, UINT32 flags, INT32 deviceI
 	if (!rdpei)
 		return FALSE;
 
-	return freerdp_client_handle_pen(inst->context, flags, deviceId, x, y, tiltx);
+	return freerdp_client_handle_pen(&csc->_p, flags, deviceId, x, y, tiltx);
 }
 
 BOOL csharp_freerdp_handle_pen_tilty(void* instance, UINT32 flags, INT32 deviceId, INT32 x, INT32 y, INT32 tilty)
@@ -1860,7 +1874,7 @@ BOOL csharp_freerdp_handle_pen_tilty(void* instance, UINT32 flags, INT32 deviceI
 	if (!rdpei)
 		return FALSE;
 
-	return freerdp_client_handle_pen(inst->context, flags, deviceId, x, y, tilty);
+	return freerdp_client_handle_pen(&csc->_p, flags, deviceId, x, y, tilty);
 }
 
 BOOL csharp_freerdp_handle_pen_pressure_rotation(void* instance, UINT32 flags, INT32 deviceId, INT32 x, INT32 y, double pressure, UINT32 rotation)
@@ -1872,7 +1886,7 @@ BOOL csharp_freerdp_handle_pen_pressure_rotation(void* instance, UINT32 flags, I
 	if (!rdpei)
 		return FALSE;
 
-	return freerdp_client_handle_pen(inst->context, flags, deviceId, x, y, pressure, rotation);
+	return freerdp_client_handle_pen(&csc->_p, flags, deviceId, x, y, pressure, rotation);
 }
 
 BOOL csharp_freerdp_handle_pen_pressure_tiltx(void* instance, UINT32 flags, INT32 deviceId, INT32 x, INT32 y, double pressure, INT32 tiltx)
@@ -1884,7 +1898,7 @@ BOOL csharp_freerdp_handle_pen_pressure_tiltx(void* instance, UINT32 flags, INT3
 	if (!rdpei)
 		return FALSE;
 	
-	return freerdp_client_handle_pen(inst->context, flags, deviceId, x, y, pressure, tiltx);
+	return freerdp_client_handle_pen(&csc->_p, flags, deviceId, x, y, pressure, tiltx);
 }
 
 BOOL csharp_freerdp_handle_pen_pressure_tilty(void* instance, UINT32 flags, INT32 deviceId, INT32 x, INT32 y, double pressure, INT32 tilty)
@@ -1896,7 +1910,7 @@ BOOL csharp_freerdp_handle_pen_pressure_tilty(void* instance, UINT32 flags, INT3
 	if (!rdpei)
 		return FALSE;
 	
-	return freerdp_client_handle_pen(inst->context, flags, deviceId, x, y, pressure, tilty);
+	return freerdp_client_handle_pen(&csc->_p, flags, deviceId, x, y, pressure, tilty);
 }
 
 BOOL csharp_freerdp_handle_pen_rotation_tiltx(void* instance, UINT32 flags, INT32 deviceId, INT32 x, INT32 y, UINT32 rotation, INT32 tiltx)
@@ -1908,7 +1922,7 @@ BOOL csharp_freerdp_handle_pen_rotation_tiltx(void* instance, UINT32 flags, INT3
 	if (!rdpei)
 		return FALSE;
 	
-	return freerdp_client_handle_pen(inst->context, flags, deviceId, x, y, rotation, tiltx);
+	return freerdp_client_handle_pen(&csc->_p, flags, deviceId, x, y, rotation, tiltx);
 }
 
 BOOL csharp_freerdp_handle_pen_rotation_tilty(void* instance, UINT32 flags, INT32 deviceId, INT32 x, INT32 y, UINT32 rotation, INT32 tilty)
@@ -1920,7 +1934,7 @@ BOOL csharp_freerdp_handle_pen_rotation_tilty(void* instance, UINT32 flags, INT3
 	if (!rdpei)
 		return FALSE;
 	
-	return freerdp_client_handle_pen(inst->context, flags, deviceId, x, y, rotation, tilty);
+	return freerdp_client_handle_pen(&csc->_p, flags, deviceId, x, y, rotation, tilty);
 }
 
 BOOL csharp_freerdp_handle_pen_tiltx_tilty(void* instance, UINT32 flags, INT32 deviceId, INT32 x, INT32 y, INT32 tiltx, INT32 tilty)
@@ -1932,7 +1946,7 @@ BOOL csharp_freerdp_handle_pen_tiltx_tilty(void* instance, UINT32 flags, INT32 d
 	if (!rdpei)
 		return FALSE;
 	
-	return freerdp_client_handle_pen(inst->context, flags, deviceId, x, y, tiltx, tilty);
+	return freerdp_client_handle_pen(&csc->_p, flags, deviceId, x, y, tiltx, tilty);
 }
 
 BOOL csharp_freerdp_handle_pen_pressure_rotation_tiltx(void* instance, UINT32 flags, INT32 deviceId, INT32 x, INT32 y, double pressure, UINT32 rotation, INT32 tiltx)
@@ -1944,7 +1958,7 @@ BOOL csharp_freerdp_handle_pen_pressure_rotation_tiltx(void* instance, UINT32 fl
 	if (!rdpei)
 		return FALSE;
 	
-	return freerdp_client_handle_pen(inst->context, flags, deviceId, x, y, pressure, rotation, tiltx);
+	return freerdp_client_handle_pen(&csc->_p, flags, deviceId, x, y, pressure, rotation, tiltx);
 }
 
 BOOL csharp_freerdp_handle_pen_pressure_rotation_tilty(void* instance, UINT32 flags, INT32 deviceId, INT32 x, INT32 y, double pressure, UINT32 rotation, INT32 tilty)
@@ -1956,7 +1970,7 @@ BOOL csharp_freerdp_handle_pen_pressure_rotation_tilty(void* instance, UINT32 fl
 	if (!rdpei)
 		return FALSE;
 	
-	return freerdp_client_handle_pen(inst->context, flags, deviceId, x, y, pressure, rotation, tilty);
+	return freerdp_client_handle_pen(&csc->_p, flags, deviceId, x, y, pressure, rotation, tilty);
 }
 
 BOOL csharp_freerdp_handle_pen_pressure_tiltx_tilty(void* instance, UINT32 flags, INT32 deviceId, INT32 x, INT32 y, double pressure, INT32 tiltx, INT32 tilty)
@@ -1968,7 +1982,7 @@ BOOL csharp_freerdp_handle_pen_pressure_tiltx_tilty(void* instance, UINT32 flags
 	if (!rdpei)
 		return FALSE;
 	
-	return freerdp_client_handle_pen(inst->context, flags, deviceId, x, y, pressure, tiltx, tilty);
+	return freerdp_client_handle_pen(&csc->_p, flags, deviceId, x, y, pressure, tiltx, tilty);
 }
 
 BOOL csharp_freerdp_handle_pen_rotation_tiltx_tilty(void* instance, UINT32 flags, INT32 deviceId, INT32 x, INT32 y, UINT32 rotation, INT32 tiltx, INT32 tilty)
@@ -1980,7 +1994,7 @@ BOOL csharp_freerdp_handle_pen_rotation_tiltx_tilty(void* instance, UINT32 flags
 	if (!rdpei)
 		return FALSE;
 	
-	return freerdp_client_handle_pen(inst->context, flags, deviceId, x, y, rotation, tiltx, tilty);
+	return freerdp_client_handle_pen(&csc->_p, flags, deviceId, x, y, rotation, tiltx, tilty);
 }
 
 BOOL csharp_freerdp_handle_pen_pressure_rotation_tiltx_tilty(void* instance, UINT32 flags, INT32 deviceId, INT32 x, INT32 y, double pressure, UINT32 rotation, INT32 tiltx, INT32 tilty)
@@ -1992,7 +2006,7 @@ BOOL csharp_freerdp_handle_pen_pressure_rotation_tiltx_tilty(void* instance, UIN
 	if (!rdpei)
 		return FALSE;
 	
-	return freerdp_client_handle_pen(inst->context, flags, deviceId, x, y, pressure, rotation, tiltx, tilty);
+	return freerdp_client_handle_pen(&csc->_p, flags, deviceId, x, y, pressure, rotation, tiltx, tilty);
 }
 
 void csharp_winpr_clipboard_lock(wClipboard* clipboard)
