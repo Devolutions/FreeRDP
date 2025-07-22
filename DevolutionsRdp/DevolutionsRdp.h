@@ -4,6 +4,7 @@
 #include <freerdp/api.h>
 #include <freerdp/freerdp.h>
 #include <winpr/clipboard.h>
+#include <winpr/image.h>
 #include <freerdp/client/cliprdr.h>
 #include <freerdp/client/disp.h>
 #include "virtualchannel.h"
@@ -205,5 +206,20 @@ FREERDP_API wClipboardDelegate* csharp_winpr_clipboard_get_delegate(wClipboard* 
 FREERDP_API wClipboard* csharp_winpr_clipboard_create();
 FREERDP_API void csharp_winpr_clipboard_destroy(wClipboard* clipboard);
 FREERDP_API const char* csharp_winpr_clipboard_get_format_id_string(UINT32 formatId);
+
+FREERDP_API const char* csharp_winpr_image_format_extension(UINT32 format);
+FREERDP_API BOOL csharp_winpr_image_format_is_supported(UINT32 format);
+FREERDP_API const char* csharp_winpr_image_format_mime(UINT32 format);
+FREERDP_API int csharp_winpr_bitmap_write(const char* filename, const BYTE* data, size_t width, size_t height, size_t bpp);
+FREERDP_API int csharp_winpr_bitmap_write_ex(const char* filename, const BYTE* data, size_t stride, size_t width, size_t height, size_t bpp);
+FREERDP_API BYTE* csharp_winpr_bitmap_construct_header(size_t width, size_t height, size_t bpp);
+FREERDP_API int csharp_winpr_image_write(wImage* image, const char* filename);
+FREERDP_API int csharp_winpr_image_write_ex(wImage* image, UINT32 format, const char* filename);
+FREERDP_API int csharp_winpr_image_read(wImage* image, const char* filename);
+FREERDP_API void* csharp_winpr_image_write_buffer(wImage* image, UINT32 format, size_t* size);
+FREERDP_API int csharp_winpr_image_read_buffer(wImage* image, const BYTE* buffer, size_t size);
+FREERDP_API void csharp_winpr_image_free(wImage* image, BOOL bFreeBuffer);
+FREERDP_API wImage* csharp_winpr_image_new(void);
+FREERDP_API BOOL csharp_winpr_image_equal(const wImage* imageA, const wImage* imageB, UINT32 flags);
 
 #endif /* CS_DEVOLUTIONSRDP_H_ */
