@@ -7,7 +7,7 @@ set(OUTPUT_NAME "DevolutionsRdp")
 set(RDP_TIE_VERSION "1.0.0")
 set(RDP_TIE_NAME "DevolutionsRdp")
 set(RDP_TIE_VENDOR "Devolutions Inc.")
-set(RDP_TIE_COPYRIGHT "Copyright 2020 ${RDP_TIE_VENDOR} All Rights Reserved.")
+set(RDP_TIE_COPYRIGHT "Copyright 2025 ${RDP_TIE_VENDOR} All Rights Reserved.")
 
 set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH};${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
@@ -57,6 +57,24 @@ set(TARGET_TYPE "SHARED")
 
 add_library(${MODULE_NAME} ${TARGET_TYPE} ${${MODULE_PREFIX}_HEADERS} ${${MODULE_PREFIX}_SOURCES} ${${MODULE_PREFIX}_RESOURCES})
 target_link_libraries(${MODULE_NAME} freerdp freerdp-client winpr)
+
+if (NOT DEFINED PNG_LIBRARY AND APPLE AND NOT IOS)
+	find_library(PNG_LIBRARY png)
+	message(STATUS "PNG_LIBRARY = ${PNG_LIBRARY}")
+endif()
+
+if (DEFINED PNG_LIBRARY)
+    target_link_libraries(${MODULE_NAME} ${PNG_LIBRARY})
+endif()
+
+if (NOT DEFINED JPEG_LIBRARY AND APPLE AND NOT IOS)
+	find_library(JPEG_LIBRARY jpeg)
+	message(STATUS "JPEG_LIBRARY = ${JPEG_LIBRARY}")
+endif()
+
+if (DEFINED JPEG_LIBRARY)
+    target_link_libraries(${MODULE_NAME} ${JPEG_LIBRARY})
+endif()
 
 if(ANDROID)
 	target_link_libraries(${MODULE_NAME} log dl m)
