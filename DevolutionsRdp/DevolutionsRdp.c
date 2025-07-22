@@ -2103,3 +2103,73 @@ const char* csharp_winpr_clipboard_get_format_id_string(UINT32 formatId)
 {
 	return ClipboardGetFormatIdString(formatId);
 }
+
+const char* csharp_winpr_image_format_extension(UINT32 format)
+{
+	return winpr_image_format_extension(format);
+}
+
+BOOL csharp_winpr_image_format_is_supported(UINT32 format)
+{
+	return winpr_image_format_is_supported(format);
+}
+
+const char* csharp_winpr_image_format_mime(UINT32 format)
+{
+	return winpr_image_format_mime(format);
+}
+
+int csharp_winpr_bitmap_write(const char* filename, const BYTE* data, size_t width, size_t height, size_t bpp)
+{
+	return winpr_bitmap_write(filename, data, width, height, bpp);
+}
+
+int csharp_winpr_bitmap_write_ex(const char* filename, const BYTE* data, size_t stride, size_t width, size_t height, size_t bpp)
+{
+	return winpr_bitmap_write_ex(filename, data, stride, width, height, bpp);
+}
+
+BYTE* csharp_winpr_bitmap_construct_header(size_t width, size_t height, size_t bpp)
+{
+	return winpr_bitmap_construct_header(width, height, bpp);
+}
+
+int csharp_winpr_image_write(wImage* image, const char* filename)
+{
+	return winpr_image_write(image, filename);
+}
+
+int csharp_winpr_image_write_ex(wImage* image, UINT32 format, const char* filename)
+{
+	return winpr_image_write_ex(image, format, filename);
+}
+
+int csharp_winpr_image_read(wImage* image, const char* filename)
+{
+	return winpr_image_read(image, filename);
+}
+
+void* csharp_winpr_image_write_buffer(wImage* image, UINT32 format, size_t* size)
+{
+	return winpr_image_write_buffer(image, format, size);
+}
+
+int csharp_winpr_image_read_buffer(wImage* image, const BYTE* buffer, size_t size)
+{
+	return winpr_image_read_buffer(image, buffer, size);
+}
+
+void csharp_winpr_image_free(wImage* image, BOOL bFreeBuffer)
+{
+	winpr_image_free(image, bFreeBuffer);
+}
+
+wImage* csharp_winpr_image_new(void)
+{
+	return winpr_image_new();
+}
+
+BOOL csharp_winpr_image_equal(const wImage* imageA, const wImage* imageB, UINT32 flags)
+{
+	return winpr_image_equal(imageA, imageB, flags);
+}
