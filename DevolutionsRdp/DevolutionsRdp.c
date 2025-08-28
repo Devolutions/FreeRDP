@@ -208,11 +208,17 @@ void cs_OnChannelConnectedEventHandler(rdpContext* context, ChannelConnectedEven
 {
 	csContext* csc = (csContext*)context->instance->context;
 
-	if (csc->channelConnected && csc->channelConnected(context, e->name, e->pInterface))
+	if (csc->channelConnected)
 	{
-		return;
+		BOOL rc = (BOOL)csc->channelConnected(context, e->name, e->pInterface);
+
+		if (rc)
+		{
+			return;
+		}
 	}
-	else if (strcmp(e->name, RDPGFX_DVC_CHANNEL_NAME) == 0)
+
+	if (strcmp(e->name, RDPGFX_DVC_CHANNEL_NAME) == 0)
 	{
 		gdi_graphics_pipeline_init(context->gdi, (RdpgfxClientContext*) e->pInterface);
 	}
