@@ -9,8 +9,8 @@
 #include <freerdp/client/disp.h>
 #include "virtualchannel.h"
 
-typedef BOOL (*fnChannelConnected)(void* context, const char* name, void* iface);
-typedef BOOL (*fnChannelDisconnected)(void* context, const char* name, void* iface);
+typedef uint32_t (*fnChannelConnected)(void* context, const char* name, void* iface);
+typedef uint32_t (*fnChannelDisconnected)(void* context, const char* name, void* iface);
 typedef void (*fnRegionUpdated)(void* rdp, int x, int y, int width, int height);
 typedef void* (*fnDesktopSizeChanged)(void* rdp, int width, int height);
 typedef void (*fnOnError)(void* context, int code);
@@ -20,7 +20,7 @@ typedef void (*fnOnNewCursor)(void* context, void* pointer, BYTE* data, UINT32 x
 typedef BYTE* (*fnOnFreeCursor)(void* context, void* pointer);
 typedef void (*fnOnSetCursor)(void* context, void* pointer);
 typedef void (*fnOnDefaultCursor)(void* context);
-typedef BOOL (*fnOnAuthenticate)(void* context, 
+typedef uint32_t (*fnOnAuthenticate)(void* context, 
 	char* pszUsername, int cchUsername, 
 	char* pszPassword, int cchPassword, 
 	char* pszDoman, int cchDomain,
