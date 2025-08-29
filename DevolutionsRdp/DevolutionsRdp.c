@@ -208,14 +208,9 @@ void cs_OnChannelConnectedEventHandler(rdpContext* context, ChannelConnectedEven
 {
 	csContext* csc = (csContext*)context->instance->context;
 
-	if (csc->channelConnected)
+	if (csc->channelConnected && csc->channelConnected(context, e->name, e->pInterface) != 0)
 	{
-		BOOL rc = (BOOL)csc->channelConnected(context, e->name, e->pInterface);
-
-		if (rc)
-		{
-			return;
-		}
+		return;
 	}
 
 	if (strcmp(e->name, RDPGFX_DVC_CHANNEL_NAME) == 0)
@@ -247,7 +242,7 @@ void cs_OnChannelDisconnectedEventHandler(rdpContext* context, ChannelDisconnect
 {
 	csContext* csc = (csContext*)context->instance->context;
 
-	if (csc->channelDisconnected && csc->channelDisconnected(context, e->name, e->pInterface))
+	if (csc->channelDisconnected && csc->channelDisconnected(context, e->name, e->pInterface) != 0)
 	{
 		return;
 	}
@@ -487,13 +482,13 @@ static void cs_post_disconnect(freerdp* instance)
 static BOOL cs_do_authenticate(freerdp* instance, char** username, char** password, char** domain, rdp_auth_reason reason)
 {
 	csContext* context = (csContext*)instance->context;
-	BOOL result = TRUE;
+	uint32_t result = 1;
 	fnOnAuthenticate callback = context->onAuthenticate;
 
 	if (reason > AUTH_RDP)
 	{
 		callback = context->onGwAuthenticate;
-		result = FALSE;
+		result = 0;
 	}
 
 	if (!callback)
@@ -526,7 +521,7 @@ static BOOL cs_do_authenticate(freerdp* instance, char** username, char** passwo
 		pszDomain, (int)sizeof(pszDomain),
 		reason);
 		
-	if (result)
+	if (result != 0)
 	{
 		free(*username);
 		*username = _strdup(pszUsername);
@@ -539,7 +534,7 @@ static BOOL cs_do_authenticate(freerdp* instance, char** username, char** passwo
 	}
 
 out:
-	return result;
+	return result != 0;
 }
 
 static BOOL cs_authenticate(freerdp* instance, char** username, char** password, char** domain, rdp_auth_reason reason)
