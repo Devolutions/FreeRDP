@@ -104,8 +104,6 @@ int cs_cliprdr_send_client_capabilities(CliprdrClientContext* cliprdr)
  */
 UINT cs_cliprdr_monitor_ready(CliprdrClientContext* cliprdr, const CLIPRDR_MONITOR_READY* monitorReady)
 {
-	csContext* ctx = (csContext*) cliprdr->custom;
-
 	cs_cliprdr_send_client_capabilities(cliprdr);
 	cs_cliprdr_send_client_format_list(cliprdr);
 

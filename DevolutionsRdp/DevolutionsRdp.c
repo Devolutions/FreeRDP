@@ -539,7 +539,6 @@ out:
 
 static BOOL cs_authenticate(freerdp* instance, char** username, char** password, char** domain, rdp_auth_reason reason)
 {
-	csContext* context = (csContext*)instance->context;
 	return cs_do_authenticate(instance, username, password, domain, reason);
 }
 
@@ -889,6 +888,14 @@ void csharp_freerdp_set_redirect_clipboard(void* instance, BOOL redirectClipboar
 	rdpSettings* settings = inst->context->settings;
 
 	settings->RedirectClipboard = redirectClipboard;
+}
+
+BOOL csharp_freerdp_add_dynamic_channel(void* instance, size_t count, const char* const* params)
+{
+	freerdp* inst = (freerdp*) instance;
+	rdpSettings* settings = inst->context->settings;
+
+	return freerdp_client_add_dynamic_channel(settings, count, params);
 }
 
 void csharp_freerdp_set_redirect_audio(void* instance, int redirectSound, BOOL redirectCapture)
@@ -1717,7 +1724,7 @@ FREERDP_API BOOL csharp_freerdp_input_send_synchronize_event(void* instance, uin
 	return freerdp_input_send_synchronize_event(inst->context->input, flags);
 }
 
-FREERDP_API void csharp_freerdp_create_virtual_channels(void* instance, const char* channelNames)
+void csharp_freerdp_create_virtual_channels(void* instance, const char* channelNames)
 {	
 	char *r, *end;
 	char* token = NULL;
