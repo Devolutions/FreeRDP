@@ -144,6 +144,7 @@
 #cmakedefine CHANNEL_RDPGFX
 #cmakedefine CHANNEL_RDPGFX_CLIENT
 #cmakedefine CHANNEL_RDPGFX_SERVER
+#cmakedefine CHANNEL_NOWPROTO_CLIENT
 /** If defined mouse cursor channel support is available.
  *
  *  \since version 3.0.0
