@@ -62,6 +62,10 @@
 #include <freerdp/channels/audin.h>
 #include <freerdp/channels/echo.h>
 
+#if defined(CHANNEL_NOWPROTO_CLIENT)
+#include <freerdp/channels/nowproto.h>
+#endif
+
 #include <freerdp/client/cmdline.h>
 #include <freerdp/version.h>
 #include <freerdp/client/utils/smartcard_cli.h>
@@ -5969,6 +5973,9 @@ typedef struct
 BOOL freerdp_client_load_addins(rdpChannels* channels, rdpSettings* settings)
 {
 	ChannelToLoad dynChannels[] = {
+#if defined(CHANNEL_NOWPROTO_CLIENT)
+		{ FreeRDP_BOOL_UNUSED, NOWPROTO_CHANNEL_NAME, NULL },
+#endif
 #if defined(CHANNEL_AINPUT_CLIENT)
 		{ FreeRDP_BOOL_UNUSED, AINPUT_CHANNEL_NAME, NULL }, /* always loaded */
 #endif
