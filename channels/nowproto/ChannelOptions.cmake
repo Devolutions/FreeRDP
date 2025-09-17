@@ -1,0 +1,20 @@
+set(OPTION_DEFAULT ON)
+set(OPTION_CLIENT_DEFAULT ON)
+set(OPTION_SERVER_DEFAULT OFF)
+
+define_channel_options(
+  NAME
+  "nowproto"
+  TYPE
+  "dynamic"
+  DESCRIPTION
+  "NOW protocol Virtual Channel Extension"
+  SPECIFICATIONS
+  "[NOW-PROTO]"
+  DEFAULT
+  ${OPTION_DEFAULT}
+  CLIENT_DEFAULT
+  ${OPTION_CLIENT_DEFAULT}
+  SERVER_DEFAULT
+  ${OPTION_SERVER_DEFAULT}
+)

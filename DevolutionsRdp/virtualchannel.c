@@ -204,7 +204,7 @@ static VOID VCAPITYPE virtchan_virtual_channel_init_event_ex(LPVOID lpUserParam,
 		setChannelError(virtchan->rdpcontext, error, "virtchan_virtual_channel_init_event reported an error");
 }
 
-BOOL VCAPITYPE rdpvirt_VirtualChannelEntryEx(PCHANNEL_ENTRY_POINTS pEntryPoints, PVOID pInitHandle, LPCSTR pszName)
+BOOL VCAPITYPE rdpvirt_VirtualChannelEntryEx(PCHANNEL_ENTRY_POINTS_EX pEntryPoints, PVOID pInitHandle, LPCSTR pszName)
 {
 	UINT rc;
 	virtchanPlugin* virtchan;
@@ -270,20 +270,17 @@ error_out:
 	return FALSE;
 }
 
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wincompatible-function-pointer-types"
-
-BOOL VCAPITYPE rdpvirt_jump_VirtualChannelEntryEx(PCHANNEL_ENTRY_POINTS pEntryPoints, PVOID pInitHandle)
+BOOL VCAPITYPE rdpvirt_jump_VirtualChannelEntryEx(PCHANNEL_ENTRY_POINTS_EX pEntryPoints, PVOID pInitHandle)
 {
 	return rdpvirt_VirtualChannelEntryEx(pEntryPoints, pInitHandle, "RDMJump");
 }
 
-BOOL VCAPITYPE rdpvirt_cmd_VirtualChannelEntryEx(PCHANNEL_ENTRY_POINTS pEntryPoints, PVOID pInitHandle)
+BOOL VCAPITYPE rdpvirt_cmd_VirtualChannelEntryEx(PCHANNEL_ENTRY_POINTS_EX pEntryPoints, PVOID pInitHandle)
 {
 	return rdpvirt_VirtualChannelEntryEx(pEntryPoints, pInitHandle, "RDMCmd");
 }
 
-BOOL VCAPITYPE rdpvirt_log_VirtualChannelEntryEx(PCHANNEL_ENTRY_POINTS pEntryPoints, PVOID pInitHandle)
+BOOL VCAPITYPE rdpvirt_log_VirtualChannelEntryEx(PCHANNEL_ENTRY_POINTS_EX pEntryPoints, PVOID pInitHandle)
 {
 	return rdpvirt_VirtualChannelEntryEx(pEntryPoints, pInitHandle, "RDMLog");
 }
@@ -299,21 +296,22 @@ PVIRTUALCHANNELENTRY cs_channels_load_static_addin_entry(LPCSTR pszName, LPCSTR 
 
 	if (strcmp(pszName, "RDMJump") == 0)
 	{
-		return rdpvirt_jump_VirtualChannelEntryEx;
+		PVIRTUALCHANNELENTRYEX f = rdpvirt_jump_VirtualChannelEntryEx;
+		return WINPR_FUNC_PTR_CAST(f, PVIRTUALCHANNELENTRY);
 	}
 	else if (strcmp(pszName, "RDMCmd") == 0)
 	{
-		return rdpvirt_cmd_VirtualChannelEntryEx;
+		PVIRTUALCHANNELENTRYEX f = rdpvirt_cmd_VirtualChannelEntryEx;
+		return WINPR_FUNC_PTR_CAST(f, PVIRTUALCHANNELENTRY);
 	}
 	else if (strcmp(pszName, "RDMLog") == 0)
 	{
-		return rdpvirt_log_VirtualChannelEntryEx;
+		PVIRTUALCHANNELENTRYEX f = rdpvirt_log_VirtualChannelEntryEx;
+		return WINPR_FUNC_PTR_CAST(f, PVIRTUALCHANNELENTRY);
 	}
 
 	return NULL;
 }
-
-#pragma clang diagnostic pop
 
 UINT cs_channel_write(VirtChanContext* context, BSTR message, int size)
 {
