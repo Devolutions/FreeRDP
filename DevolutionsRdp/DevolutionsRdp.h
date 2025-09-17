@@ -161,6 +161,7 @@ FREERDP_API void csharp_freerdp_set_redirect_audio(void* instance, int redirectS
 FREERDP_API void csharp_freerdp_set_redirect_printers(void* instance, BOOL redirect);
 FREERDP_API void csharp_freerdp_set_redirect_smartcards(void* instance, BOOL redirect);
 
+FREERDP_API BOOL csharp_freerdp_add_dynamic_channel(void* instance, size_t count, const char* const* params);
 FREERDP_API void csharp_freerdp_create_virtual_channels(void* instance, const char* channelNames);
 FREERDP_API UINT csharp_freerdp_channel_write(void* instance, char* channelName, BSTR message, int size);
 FREERDP_API void csharp_freerdp_channel_set_on_received_data(void* instance, fnOnChannelReceivedData fn);
