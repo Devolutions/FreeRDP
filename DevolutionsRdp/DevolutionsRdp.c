@@ -309,6 +309,7 @@ static BOOL cs_pre_connect(freerdp* instance)
 {
 	rdpContext* context = instance->context;
 	rdpSettings* settings = context->settings;
+	csContext* csc = (csContext*) context->instance->context;
 	BOOL bitmap_cache = settings->BitmapCacheEnabled;
 	
 	settings->IgnoreInvalidDevices = TRUE;
@@ -348,6 +349,11 @@ static BOOL cs_pre_connect(freerdp* instance)
 	PubSub_SubscribeChannelDisconnected(context->pubSub,
 										(pChannelDisconnectedEventHandler) cs_OnChannelDisconnectedEventHandler);
 
+	if (csc && csc->onPreConnect)
+	{
+		return csc->onPreConnect(instance) != 0;
+	}
+	
 	return TRUE;
 }
 
@@ -816,6 +822,14 @@ void csharp_freerdp_set_on_channel_disconnected(void* instance, fnChannelDisconn
 	csContext* csc = (csContext*)inst->context;
 	
 	csc->channelDisconnected = fn;
+}
+
+void csharp_freerdp_set_on_pre_connect(void* instance, fnPreConnect fn)
+{
+	freerdp* inst = (freerdp*)instance;
+	csContext* csc = (csContext*)inst->context;
+	
+	csc->onPreConnect = fn;
 }
 
 void csharp_freerdp_set_on_region_updated(void* instance, fnRegionUpdated fn)
