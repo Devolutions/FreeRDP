@@ -11,6 +11,7 @@
 
 typedef uint32_t (*fnChannelConnected)(void* context, const char* name, void* iface);
 typedef uint32_t (*fnChannelDisconnected)(void* context, const char* name, void* iface);
+typedef uint32_t (*fnPreConnect)(void* context);
 typedef void (*fnRegionUpdated)(void* rdp, int x, int y, int width, int height);
 typedef void* (*fnDesktopSizeChanged)(void* rdp, int width, int height);
 typedef void (*fnOnError)(void* context, int code);
@@ -34,6 +35,7 @@ typedef struct csharp_context
 	
 	fnChannelConnected channelConnected;
 	fnChannelDisconnected channelDisconnected;
+	fnPreConnect onPreConnect;
 	fnRegionUpdated regionUpdated;
 	fnDesktopSizeChanged desktopSizeChanged;
 	fnOnClipboardUpdate onClipboardUpdate;
@@ -80,6 +82,7 @@ FREERDP_API void csharp_freerdp_set_shell_working_directory(void* instance, cons
 FREERDP_API void csharp_freerdp_set_initial_buffer(void* instance, void* buffer);
 FREERDP_API void csharp_freerdp_set_on_channel_connected(void* instance, fnChannelConnected fn);
 FREERDP_API void csharp_freerdp_set_on_channel_disconnected(void* instance, fnChannelDisconnected fn);
+FREERDP_API void csharp_freerdp_set_on_pre_connect(void* instance, fnPreConnect fn);
 FREERDP_API void csharp_freerdp_set_on_region_updated(void* instance, fnRegionUpdated fn);
 FREERDP_API void csharp_freerdp_set_on_desktop_size_changed(void* instance, fnDesktopSizeChanged fn);
 FREERDP_API BOOL csharp_freerdp_set_client_hostname(void* instance, const char* clientHostname);
