@@ -56,7 +56,7 @@ endif()
 set(TARGET_TYPE "SHARED")
 
 add_library(${MODULE_NAME} ${TARGET_TYPE} ${${MODULE_PREFIX}_HEADERS} ${${MODULE_PREFIX}_SOURCES} ${${MODULE_PREFIX}_RESOURCES})
-target_link_libraries(${MODULE_NAME} freerdp freerdp-client winpr /Users/rmarkiewicz/.conan/data/cjson/1.7.15/devolutions/stable/package/85d722e93a74f48ea12c0f930396daa574e261c2/lib/libcjson.a)
+target_link_libraries(${MODULE_NAME} freerdp freerdp-client winpr)
 
 # if (NOT DEFINED PNG_LIBRARY AND APPLE AND NOT IOS)
 # 	find_library(PNG_LIBRARY png)
