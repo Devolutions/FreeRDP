@@ -781,6 +781,14 @@ void csharp_freerdp_free(void* instance)
 	freerdp_client_context_free(inst->context);
 }
 
+void* csharp_freerdp_get_settings(void* instance)
+{
+	freerdp* inst = (freerdp*)instance;
+	rdpSettings* settings = inst->context->settings;
+
+	return settings;
+}
+
 BOOL csharp_freerdp_connect(void* instance)
 {
 	return freerdp_connect((freerdp*)instance);
@@ -1550,6 +1558,11 @@ uint32_t csharp_get_nla_sspi_error(void* instance)
 	rdpContext* ctx = (rdpContext*)inst->context;
 
 	return freerdp_get_nla_sspi_error(ctx);
+}
+
+const char* csharp_get_security_status_string(SECURITY_STATUS status)
+{
+	return GetSecurityStatusString(status);
 }
 
 void csharp_print_message(const char* tag, int level, uint32_t line, 
