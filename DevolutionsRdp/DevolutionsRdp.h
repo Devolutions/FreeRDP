@@ -74,6 +74,7 @@ FREERDP_API BOOL csharp_configure_log_file(int wlogLevel, const char* logPath, c
 
 FREERDP_API void* csharp_freerdp_new(void);
 FREERDP_API void csharp_freerdp_free(void* instance);
+FREERDP_API void* csharp_freerdp_get_settings(void* instance);
 FREERDP_API BOOL csharp_freerdp_connect(void* instance);
 FREERDP_API BOOL csharp_freerdp_disconnect(void* instance);
 FREERDP_API BOOL csharp_freerdp_abort_connect(void* instance);
@@ -154,6 +155,7 @@ FREERDP_API void csharp_set_on_cursor_notifications(void* instance, fnOnNewCurso
 FREERDP_API void csharp_set_on_gateway_message(void* instance, pPresentGatewayMessage fn);
 FREERDP_API uint32_t csharp_get_last_error(void* instance);
 FREERDP_API uint32_t csharp_get_nla_sspi_error(void* instance);
+FREERDP_API const char* csharp_get_security_status_string(SECURITY_STATUS status);
 FREERDP_API void csharp_print_message(const char* tag, int level, uint32_t line, const char* file, const char* function, const char* message);
 FREERDP_API void csharp_deallocate(void* ptr);
 
