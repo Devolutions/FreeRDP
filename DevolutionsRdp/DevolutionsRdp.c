@@ -2208,3 +2208,28 @@ BOOL csharp_winpr_image_equal(const wImage* imageA, const wImage* imageB, UINT32
 {
 	return winpr_image_equal(imageA, imageB, flags);
 }
+
+wLog* csharp_WLog_GetRoot()
+{
+	return WLog_GetRoot();
+}
+
+BOOL csharp_WLog_SetLogLevel(wLog* log, DWORD logLevel)
+{
+	return WLog_SetLogLevel(log, logLevel);
+}
+
+BOOL csharp_WLog_SetLogAppenderType(wLog* log, DWORD logAppenderType)
+{
+	return WLog_SetLogAppenderType(log, logAppenderType);
+}
+
+wLogAppender* csharp_WLog_GetLogAppender(wLog* log)
+{
+	return WLog_GetLogAppender(log);
+}
+
+BOOL csharp_WLog_ConfigureAppender(wLogAppender* appender, const char* setting, void* value)
+{
+	return WLog_ConfigureAppender(appender, setting, value);
+}
