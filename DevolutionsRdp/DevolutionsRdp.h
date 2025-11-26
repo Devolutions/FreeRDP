@@ -228,4 +228,10 @@ FREERDP_API void csharp_winpr_image_free(wImage* image, BOOL bFreeBuffer);
 FREERDP_API wImage* csharp_winpr_image_new(void);
 FREERDP_API BOOL csharp_winpr_image_equal(const wImage* imageA, const wImage* imageB, UINT32 flags);
 
+FREERDP_API wLog* csharp_WLog_GetRoot();
+FREERDP_API BOOL csharp_WLog_SetLogLevel(wLog* log, DWORD logLevel);
+FREERDP_API BOOL csharp_WLog_SetLogAppenderType(wLog* log, DWORD logAppenderType);
+FREERDP_API wLogAppender* csharp_WLog_GetLogAppender(wLog* log);
+FREERDP_API BOOL csharp_WLog_ConfigureAppender(wLogAppender* appender, const char* setting, void* value);
+
 #endif /* CS_DEVOLUTIONSRDP_H_ */
