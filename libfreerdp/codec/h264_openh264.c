@@ -555,6 +555,8 @@ static BOOL openh264_init(H264_CONTEXT* h264)
 {
 #if defined(WITH_OPENH264_LOADING)
 	BOOL success = FALSE;
+	static char* cached_openh264_library_path = NULL;
+	static BOOL env_checked = FALSE;
 #endif
 	long status = 0;
 	H264_CONTEXT_OPENH264* sysContexts = NULL;
@@ -575,12 +577,28 @@ static BOOL openh264_init(H264_CONTEXT* h264)
 
 	h264->pSystemData = (void*)sysContexts;
 #if defined(WITH_OPENH264_LOADING)
-	char* openh264_path_from_env = openh264_library_path_from_environment(h264, "FREERDP_OPENH264_LIBRARY_PATH");
-
-	if (openh264_path_from_env)
+	if (!env_checked)
 	{
-		success = openh264_load_functionpointers(h264, openh264_path_from_env);
-		free(openh264_path_from_env);
+		cached_openh264_library_path = openh264_library_path_from_environment(h264, "FREERDP_OPENH264_LIBRARY_PATH");
+		env_checked = TRUE;
+
+		if (cached_openh264_library_path)
+		{
+			WLog_Print(h264->log, WLOG_INFO, "Using OpenH264 library path from environment: %s", cached_openh264_library_path);
+		}
+		else
+		{
+			WLog_Print(h264->log, WLOG_DEBUG, "No FREERDP_OPENH264_LIBRARY_PATH set, using default search");
+		}
+	}
+	else if (cached_openh264_library_path)
+	{
+		WLog_Print(h264->log, WLOG_DEBUG, "Reusing cached OpenH264 library path: %s", cached_openh264_library_path);
+	}
+
+	if (cached_openh264_library_path)
+	{
+		success = openh264_load_functionpointers(h264, cached_openh264_library_path);
 	}
 	else
 	{
