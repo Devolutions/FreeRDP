@@ -30,12 +30,6 @@
 
 #define TAG FREERDP_TAG("codec.swscale")
 
-// Forward declare AVPixelFormat enum values we need
-enum AVPixelFormat
-{
-	AV_PIX_FMT_NONE = -1
-};
-
 // Function pointer types
 typedef struct SwsContext* (*pSws_getContext)(int srcW, int srcH, int srcFormat, int dstW,
                                                int dstH, int dstFormat, int flags,
