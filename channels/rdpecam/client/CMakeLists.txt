@@ -42,7 +42,7 @@ endif()
 
 # Handle swscale dependency based on loading mode
 if(WITH_SWSCALE_LOADING)
-  # Runtime loading - need FFmpeg headers for libavutil but not linking swscale
+  # Runtime loading - libavutil still needed for image utilities (LGPL, safe to link)
   # MJPG format requires libavcodec which is not available with runtime loading
   option(RDPECAM_INPUT_FORMAT_MJPG "[MS-RDPECAM] Enable MJPG camera format (NOT supported with runtime loading)" OFF)
   if(RDPECAM_INPUT_FORMAT_MJPG)
@@ -50,9 +50,23 @@ if(WITH_SWSCALE_LOADING)
     set(RDPECAM_INPUT_FORMAT_MJPG OFF CACHE BOOL "" FORCE)
   endif()
 
-  find_package(FFmpeg REQUIRED COMPONENTS AVUTIL)
+  # Find libavutil for image utility functions (av_image_fill_linesizes, av_image_fill_pointers)
+  # Note: libavutil is LGPL licensed, safe to link dynamically (no GPL contamination)
+  find_package(FFmpeg COMPONENTS AVUTIL)
+  if(NOT AVUTIL_FOUND)
+    message(FATAL_ERROR
+      "libavutil is required for rdpecam channel.\n"
+      "Install: sudo apt-get install libavutil-dev (Debian/Ubuntu)\n"
+      "         sudo dnf install ffmpeg-devel (Fedora)\n"
+      "         sudo pacman -S ffmpeg (Arch)\n"
+      "\n"
+      "Note: libavutil is LGPL licensed (not GPL), safe to link with Apache 2.0 code.\n"
+      "Only libswscale (GPL) is loaded at runtime, avoiding license contamination.")
+  endif()
+
   include_directories(SYSTEM ${AVUTIL_INCLUDE_DIRS})
-  message(STATUS "rdpecam: Using runtime swscale loading (FFmpeg optional at runtime)")
+  message(STATUS "rdpecam: Using runtime swscale loading (swscale optional at runtime)")
+  message(STATUS "rdpecam: libavutil linked (LGPL, safe - provides image utilities)")
   message(STATUS "rdpecam: MJPG format disabled (requires libavcodec, not supported with runtime loading)")
   set(${MODULE_PREFIX}_LIBS freerdp winpr ${AVUTIL_LIBRARIES})
 else()
