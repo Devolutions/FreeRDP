@@ -994,8 +994,8 @@ void csharp_freerdp_set_redirect_cameras(void* instance, const char* devicePath)
 		char cameraArgs[256] = { 0 };
 		snprintf(cameraArgs, sizeof(cameraArgs), "device:%s", devicePath);
 		p = freerdp_command_line_parse_comma_separated_values_offset("rdpecam", cameraArgs, &count);
-		// Use add_static_channel to ensure rdpecam symbols are linked into binary
-		freerdp_client_add_static_channel(settings, count, p);
+		// rdpecam is a Dynamic Virtual Channel (DVC) at the protocol level
+		freerdp_client_add_dynamic_channel(settings, count, (const char* const*)p);
 		free(p);
 	}
 }
