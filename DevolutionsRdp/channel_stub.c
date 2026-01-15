@@ -35,9 +35,15 @@ extern "C"
 {
 #endif
 
-	/* Forward declaration of the static addin loader function */
-	extern void* freerdp_channels_load_static_addin_entry(const char*, const char*, const char*,
-	                                                       unsigned long);
+	/* Forward declaration of the static addin table - this is in tables.c.o */
+	typedef struct
+	{
+		const char* name;
+		const char* type;
+		const void* entry;
+		const void* table;
+	} STATIC_ADDIN_TABLE;
+	extern const STATIC_ADDIN_TABLE CLIENT_STATIC_ADDIN_TABLE[];
 
 	/* rdpecam channel entry points - these need explicit references */
 	extern unsigned int rdpecam_DVCPluginEntry(void* pEntryPoints);
@@ -53,8 +59,8 @@ extern "C"
  * The volatile qualifier prevents the compiler from optimizing away references.
  */
 volatile const void* devolutions_rdp_static_channel_symbols[] = {
-	/* Reference the loader function - this will pull in tables.c.o with all tables */
-	(const void*)freerdp_channels_load_static_addin_entry,
+	/* Reference CLIENT_STATIC_ADDIN_TABLE - this will pull in tables.c.o with all tables */
+	(const void*)CLIENT_STATIC_ADDIN_TABLE,
 	/* Reference the actual entry points */
 	(const void*)rdpecam_DVCPluginEntry,
 	(const void*)v4l_freerdp_rdpecam_client_subsystem_entry,
