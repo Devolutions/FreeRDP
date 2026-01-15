@@ -76,6 +76,37 @@ if (DEFINED JPEG_LIBRARY)
     target_link_libraries(${MODULE_NAME} ${JPEG_LIBRARY})
 endif()
 
+# swscale support for image scaling and rdpecam (camera redirection)
+# IMPORTANT: DevolutionsRdp MUST use runtime loading to avoid GPL license contamination
+# We never link swscale directly - it's always loaded at runtime
+if (WITH_SWSCALE)
+	# Safety check: DevolutionsRdp requires runtime loading
+	if (NOT WITH_SWSCALE_LOADING)
+		message(FATAL_ERROR
+			"DevolutionsRdp requires WITH_SWSCALE_LOADING=ON to avoid GPL contamination. "
+			"Direct linking of swscale is NOT permitted for DevolutionsRdp. "
+			"Please rebuild with -DWITH_SWSCALE_LOADING=ON")
+	endif()
+
+	# Runtime loading confirmed - no FFmpeg dependency at build or runtime
+	message(STATUS "DevolutionsRdp: swscale will be loaded at runtime (NO FFmpeg dependency)")
+	message(STATUS "  - Image scaling: Available if user has FFmpeg installed")
+	message(STATUS "  - rdpecam channel: Available if user has FFmpeg installed")
+	message(STATUS "  - No GPL contamination: swscale is never linked directly")
+
+	# Verify we're not accidentally linking swscale
+	get_target_property(_DEVRDP_LINK_LIBS ${MODULE_NAME} LINK_LIBRARIES)
+	if (_DEVRDP_LINK_LIBS)
+		string(TOLOWER "${_DEVRDP_LINK_LIBS}" _DEVRDP_LINK_LIBS_LOWER)
+		if ("${_DEVRDP_LINK_LIBS_LOWER}" MATCHES "swscale")
+			message(FATAL_ERROR
+				"SAFETY CHECK FAILED: DevolutionsRdp is accidentally linking swscale! "
+				"This violates GPL licensing requirements. "
+				"Link libraries: ${_DEVRDP_LINK_LIBS}")
+		endif()
+	endif()
+endif()
+
 if(ANDROID)
 	target_link_libraries(${MODULE_NAME} log dl m)
 endif()
@@ -107,6 +138,30 @@ endif()
 
 set_target_properties(${MODULE_NAME} PROPERTIES PREFIX "")
 set_target_properties(${MODULE_NAME} PROPERTIES OUTPUT_NAME "${OUTPUT_NAME}")
+
+# FINAL SAFETY CHECK: Verify swscale was never linked (GPL license protection)
+if (WITH_SWSCALE)
+	get_target_property(_FINAL_LINK_LIBS ${MODULE_NAME} LINK_LIBRARIES)
+	if (_FINAL_LINK_LIBS)
+		string(TOLOWER "${_FINAL_LINK_LIBS}" _FINAL_LINK_LIBS_LOWER)
+		if ("${_FINAL_LINK_LIBS_LOWER}" MATCHES "swscale")
+			message(FATAL_ERROR
+				"\n"
+				"========================================================================\n"
+				"CRITICAL GPL LICENSE VIOLATION DETECTED!\n"
+				"========================================================================\n"
+				"DevolutionsRdp is linking against swscale library directly!\n"
+				"This creates a GPL license obligation that violates our Apache 2.0 license.\n"
+				"\n"
+				"Linked libraries: ${_FINAL_LINK_LIBS}\n"
+				"\n"
+				"DevolutionsRdp MUST use runtime loading (WITH_SWSCALE_LOADING=ON).\n"
+				"Build aborted to prevent GPL contamination.\n"
+				"========================================================================\n")
+		endif()
+	endif()
+	message(STATUS "✓ DevolutionsRdp: GPL safety check passed - no swscale linkage detected")
+endif()
 
 install(TARGETS DevolutionsRdp
 	EXPORT DevolutionsRdp-target

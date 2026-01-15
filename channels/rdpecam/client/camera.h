@@ -29,7 +29,11 @@
 #include <libavcodec/avcodec.h>
 #endif
 
+#if defined(WITH_SWSCALE_LOADING)
+#include "../../libfreerdp/codec/swscale_loader.h"
+#else
 #include <libswscale/swscale.h>
+#endif
 #include <libavutil/imgutils.h>
 
 #include <winpr/wlog.h>
