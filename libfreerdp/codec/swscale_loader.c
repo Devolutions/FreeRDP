@@ -40,6 +40,11 @@ typedef int (*pSws_scale)(struct SwsContext* c, const uint8_t* const srcSlice[],
                           uint8_t* const dst[], const int dstStride[]);
 typedef void (*pSws_freeContext)(struct SwsContext* c);
 
+// libavutil function pointer types
+typedef int (*pAv_image_fill_linesizes)(int linesizes[4], int pix_fmt, int width);
+typedef int (*pAv_image_fill_pointers)(uint8_t* data[4], int pix_fmt, int height, uint8_t* ptr,
+                                        const int linesizes[4]);
+
 typedef struct
 {
 	HMODULE lib;
@@ -50,7 +55,17 @@ typedef struct
 	BOOL available;
 } SWSCALE_LIBRARY;
 
+typedef struct
+{
+	HMODULE lib;
+	pAv_image_fill_linesizes fill_linesizes;
+	pAv_image_fill_pointers fill_pointers;
+	BOOL initialized;
+	BOOL available;
+} AVUTIL_LIBRARY;
+
 static SWSCALE_LIBRARY g_swscale = { 0 };
+static AVUTIL_LIBRARY g_avutil = { 0 };
 
 static const char* swscale_library_names[] = {
 #if defined(_WIN32)
@@ -220,6 +235,123 @@ void freerdp_sws_freeContext(struct SwsContext* ctx)
 
 	WINPR_ASSERT(g_swscale.freeContext);
 	g_swscale.freeContext(ctx);
+}
+
+// =============================================================================
+// libavutil Runtime Loading
+// =============================================================================
+
+static const char* avutil_library_names[] = {
+#if defined(_WIN32)
+	"avutil-59.dll", "avutil-58.dll", "avutil-57.dll", "avutil-56.dll", "avutil.dll"
+#elif defined(__APPLE__)
+	"libavutil.dylib",
+	"libavutil.59.dylib",
+	"libavutil.58.dylib",
+	"libavutil.57.dylib",
+	"libavutil.56.dylib"
+#else
+	"libavutil.so.59", "libavutil.so.58", "libavutil.so.57", "libavutil.so.56", "libavutil.so"
+#endif
+};
+
+static BOOL avutil_load_library(const char* name)
+{
+	WINPR_ASSERT(name);
+
+	WLog_DBG(TAG, "Attempting to load avutil library: %s", name);
+
+	g_avutil.lib = LoadLibraryA(name);
+	if (!g_avutil.lib)
+	{
+		WLog_DBG(TAG, "Failed to load %s", name);
+		return FALSE;
+	}
+
+	g_avutil.fill_linesizes =
+	    (pAv_image_fill_linesizes)(void*)GetProcAddress(g_avutil.lib, "av_image_fill_linesizes");
+	g_avutil.fill_pointers =
+	    (pAv_image_fill_pointers)(void*)GetProcAddress(g_avutil.lib, "av_image_fill_pointers");
+
+	if (!g_avutil.fill_linesizes || !g_avutil.fill_pointers)
+	{
+		WLog_WARN(TAG, "Failed to load required functions from %s", name);
+		FreeLibrary(g_avutil.lib);
+		g_avutil.lib = NULL;
+		return FALSE;
+	}
+
+	WLog_INFO(TAG, "Successfully loaded avutil library: %s", name);
+	return TRUE;
+}
+
+BOOL freerdp_avutil_init(void)
+{
+	if (g_avutil.initialized)
+		return g_avutil.available;
+
+	g_avutil.initialized = TRUE;
+	g_avutil.available = FALSE;
+
+	// Try environment variable first
+	char* env_path = swscale_library_path_from_environment("FREERDP_AVUTIL_LIBRARY_PATH");
+	if (env_path)
+	{
+		WLog_INFO(TAG, "Using avutil library path from environment: %s", env_path);
+		if (avutil_load_library(env_path))
+		{
+			g_avutil.available = TRUE;
+			free(env_path);
+			return TRUE;
+		}
+		free(env_path);
+	}
+
+	// Try default library names
+	WLog_DBG(TAG, "Searching for avutil library in default locations");
+	for (size_t i = 0; i < ARRAYSIZE(avutil_library_names); i++)
+	{
+		if (avutil_load_library(avutil_library_names[i]))
+		{
+			g_avutil.available = TRUE;
+			return TRUE;
+		}
+	}
+
+	WLog_INFO(TAG,
+	          "avutil library not found - image format features will be limited. "
+	          "Install FFmpeg to enable full image format support.");
+	return FALSE;
+}
+
+BOOL freerdp_avutil_available(void)
+{
+	return freerdp_avutil_init() && g_avutil.available;
+}
+
+int freerdp_av_image_fill_linesizes(int linesizes[4], int pix_fmt, int width)
+{
+	if (!freerdp_avutil_available())
+	{
+		WLog_WARN(TAG, "av_image_fill_linesizes called but avutil not available");
+		return -1;
+	}
+
+	WINPR_ASSERT(g_avutil.fill_linesizes);
+	return g_avutil.fill_linesizes(linesizes, pix_fmt, width);
+}
+
+int freerdp_av_image_fill_pointers(uint8_t* data[4], int pix_fmt, int height, uint8_t* ptr,
+                                    const int linesizes[4])
+{
+	if (!freerdp_avutil_available())
+	{
+		WLog_WARN(TAG, "av_image_fill_pointers called but avutil not available");
+		return -1;
+	}
+
+	WINPR_ASSERT(g_avutil.fill_pointers);
+	return g_avutil.fill_pointers(data, pix_fmt, height, ptr, linesizes);
 }
 
 #endif /* WITH_SWSCALE && WITH_SWSCALE_LOADING */

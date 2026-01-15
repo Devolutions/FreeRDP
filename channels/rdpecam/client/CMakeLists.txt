@@ -42,7 +42,8 @@ endif()
 
 # Handle swscale dependency based on loading mode
 if(WITH_SWSCALE_LOADING)
-  # Runtime loading - libavutil still needed for image utilities (LGPL, safe to link)
+  # Runtime loading - NO FFmpeg dependencies at build time
+  # Both swscale and libavutil are loaded at runtime via dlopen
   # MJPG format requires libavcodec which is not available with runtime loading
   option(RDPECAM_INPUT_FORMAT_MJPG "[MS-RDPECAM] Enable MJPG camera format (NOT supported with runtime loading)" OFF)
   if(RDPECAM_INPUT_FORMAT_MJPG)
@@ -50,52 +51,12 @@ if(WITH_SWSCALE_LOADING)
     set(RDPECAM_INPUT_FORMAT_MJPG OFF CACHE BOOL "" FORCE)
   endif()
 
-  # Find libavutil for image utility functions (av_image_fill_linesizes, av_image_fill_pointers)
-  # Note: libavutil is LGPL licensed, safe to link dynamically (no GPL contamination)
-  find_package(FFmpeg COMPONENTS AVUTIL)
-
-  # Fallback: if FindFFmpeg fails (e.g., no pkg-config), try manual search
-  if(NOT AVUTIL_FOUND AND NOT FFmpeg_AVUTIL_FOUND)
-    message(STATUS "rdpecam: FFmpeg module failed, trying manual search for libavutil...")
-
-    find_path(AVUTIL_INCLUDE_DIRS
-      NAMES libavutil/avutil.h
-      PATHS /usr/include /usr/local/include
-      PATH_SUFFIXES ffmpeg
-    )
-
-    find_library(AVUTIL_LIBRARIES
-      NAMES avutil
-      PATHS /usr/lib /usr/local/lib /usr/lib/x86_64-linux-gnu /usr/lib/aarch64-linux-gnu
-    )
-
-    if(AVUTIL_INCLUDE_DIRS AND AVUTIL_LIBRARIES)
-      set(AVUTIL_FOUND TRUE)
-      message(STATUS "rdpecam: Found libavutil manually")
-      message(STATUS "  AVUTIL_LIBRARIES = ${AVUTIL_LIBRARIES}")
-      message(STATUS "  AVUTIL_INCLUDE_DIRS = ${AVUTIL_INCLUDE_DIRS}")
-    endif()
-  endif()
-
-  if(NOT AVUTIL_FOUND AND NOT FFmpeg_AVUTIL_FOUND)
-    message(FATAL_ERROR
-      "libavutil is required for rdpecam channel.\n"
-      "\n"
-      "Install dependencies:\n"
-      "  sudo apt-get install pkg-config libavutil-dev (Debian/Ubuntu)\n"
-      "  sudo dnf install pkgconfig ffmpeg-devel (Fedora)\n"
-      "  sudo pacman -S pkgconfig ffmpeg (Arch)\n"
-      "\n"
-      "Note: pkg-config is needed for CMake to find FFmpeg libraries.\n"
-      "Note: libavutil is LGPL licensed (not GPL), safe to link with Apache 2.0 code.\n"
-      "Only libswscale (GPL) is loaded at runtime, avoiding license contamination.")
-  endif()
-
-  include_directories(SYSTEM ${AVUTIL_INCLUDE_DIRS})
-  message(STATUS "rdpecam: Using runtime swscale loading (swscale optional at runtime)")
-  message(STATUS "rdpecam: libavutil linked (LGPL, safe - provides image utilities)")
-  message(STATUS "rdpecam: MJPG format disabled (requires libavcodec, not supported with runtime loading)")
-  set(${MODULE_PREFIX}_LIBS freerdp winpr ${AVUTIL_LIBRARIES})
+  message(STATUS "rdpecam: Using runtime FFmpeg loading (NO build-time dependencies)")
+  message(STATUS "  - libswscale: Loaded at runtime via dlopen (GPL-safe)")
+  message(STATUS "  - libavutil: Loaded at runtime via dlopen (LGPL-safe)")
+  message(STATUS "  - Camera redirection works if user has FFmpeg installed")
+  message(STATUS "  - MJPG format disabled (requires libavcodec)")
+  set(${MODULE_PREFIX}_LIBS freerdp winpr)
 else()
   # Direct linking - find and link FFmpeg/swscale
   option(RDPECAM_INPUT_FORMAT_MJPG "[MS-RDPECAM] Enable MJPG camera format" ON)

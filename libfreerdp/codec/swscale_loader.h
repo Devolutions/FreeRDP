@@ -146,6 +146,29 @@ extern "C"
 	 */
 	void freerdp_sws_freeContext(struct SwsContext* ctx);
 
+	/**
+	 * @brief Initialize and load the avutil library at runtime
+	 * @return TRUE if avutil is available and loaded successfully, FALSE otherwise
+	 */
+	BOOL freerdp_avutil_init(void);
+
+	/**
+	 * @brief Check if avutil is available
+	 * @return TRUE if avutil library is loaded and ready to use
+	 */
+	BOOL freerdp_avutil_available(void);
+
+	/**
+	 * @brief Fill line sizes for image buffer (wrapper for av_image_fill_linesizes)
+	 */
+	int freerdp_av_image_fill_linesizes(int linesizes[4], int pix_fmt, int width);
+
+	/**
+	 * @brief Fill image data pointers (wrapper for av_image_fill_pointers)
+	 */
+	int freerdp_av_image_fill_pointers(uint8_t* data[4], int pix_fmt, int height,
+	                                    uint8_t* ptr, const int linesizes[4]);
+
 #ifdef __cplusplus
 }
 #endif

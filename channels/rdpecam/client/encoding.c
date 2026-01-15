@@ -351,14 +351,24 @@ static BOOL ecam_encoder_compress_h264(CameraDeviceStream* stream, const BYTE* s
 	{
 		pixFormat = ecamToAVPixFormat(inputFormat);
 
+#if defined(WITH_SWSCALE_LOADING)
+		if (freerdp_av_image_fill_linesizes(srcLineSizes, pixFormat, (int)size.width) < 0)
+#else
 		if (av_image_fill_linesizes(srcLineSizes, pixFormat, (int)size.width) < 0)
+#endif
 		{
 			WLog_ERR(TAG, "av_image_fill_linesizes failed");
 			return FALSE;
 		}
 
+#if defined(WITH_SWSCALE_LOADING)
+		if (freerdp_av_image_fill_pointers(srcSlice, pixFormat, (int)size.height,
+		                                    WINPR_CAST_CONST_PTR_AWAY(srcData, BYTE*),
+		                                    srcLineSizes) < 0)
+#else
 		if (av_image_fill_pointers(srcSlice, pixFormat, (int)size.height,
 		                           WINPR_CAST_CONST_PTR_AWAY(srcData, BYTE*), srcLineSizes) < 0)
+#endif
 		{
 			WLog_ERR(TAG, "av_image_fill_pointers failed");
 			return FALSE;

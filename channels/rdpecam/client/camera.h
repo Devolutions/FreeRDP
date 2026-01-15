@@ -31,13 +31,13 @@
 #endif
 
 #if defined(WITH_SWSCALE_LOADING)
+/* Runtime loading - use wrapper that loads FFmpeg at runtime */
 #include "../../libfreerdp/codec/swscale_loader.h"
 #else
+/* Direct linking - use FFmpeg headers */
 #include <libswscale/swscale.h>
-#endif
-
-/* libavutil is always available (found by CMake even with runtime loading) */
 #include <libavutil/imgutils.h>
+#endif
 
 #include <winpr/wlog.h>
 #include <winpr/wtypes.h>

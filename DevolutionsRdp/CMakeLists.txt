@@ -88,11 +88,13 @@ if (WITH_SWSCALE)
 			"Please rebuild with -DWITH_SWSCALE_LOADING=ON")
 	endif()
 
-	# Runtime loading confirmed - no FFmpeg dependency at build or runtime
-	message(STATUS "DevolutionsRdp: swscale will be loaded at runtime (NO FFmpeg dependency)")
+	# Runtime loading confirmed - no FFmpeg dependency at build or link time
+	message(STATUS "DevolutionsRdp: FFmpeg will be loaded at runtime (NO build/link dependencies)")
+	message(STATUS "  - libswscale (GPL): Loaded at runtime via dlopen")
+	message(STATUS "  - libavutil (LGPL): Loaded at runtime via dlopen")
 	message(STATUS "  - Image scaling: Available if user has FFmpeg installed")
 	message(STATUS "  - rdpecam channel: Available if user has FFmpeg installed")
-	message(STATUS "  - No GPL contamination: swscale is never linked directly")
+	message(STATUS "  - No GPL contamination: nothing is statically or dynamically linked")
 
 	# Verify we're not accidentally linking swscale
 	get_target_property(_DEVRDP_LINK_LIBS ${MODULE_NAME} LINK_LIBRARIES)
