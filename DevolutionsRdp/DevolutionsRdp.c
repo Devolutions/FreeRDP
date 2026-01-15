@@ -973,20 +973,12 @@ void csharp_freerdp_set_redirect_audio(void* instance, int redirectSound, BOOL r
 	}
 }
 
-/* Forward declare rdpecam entry points to force linker to include them */
-extern UINT rdpecam_DVCPluginEntry(void* pEntryPoints);
-extern UINT v4l_freerdp_rdpecam_client_subsystem_entry(void* pEntryPoints);
-
 void csharp_freerdp_set_redirect_cameras(void* instance, const char* devicePath)
 {
 	freerdp* inst = (freerdp*) instance;
 	rdpSettings* settings = inst->context->settings;
 	char** p = NULL;
 	size_t count = 0;
-
-	/* Create reference to rdpecam symbols to force linker inclusion */
-	(void)rdpecam_DVCPluginEntry;
-	(void)v4l_freerdp_rdpecam_client_subsystem_entry;
 
 	if (devicePath && strlen(devicePath) > 0)
 	{

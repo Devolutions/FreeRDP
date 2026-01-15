@@ -72,7 +72,8 @@ endif()
 
 set(${MODULE_PREFIX}_SRCS camera_device_enum_main.c camera_device_main.c encoding.c)
 
-add_channel_client_library(${MODULE_PREFIX} ${MODULE_NAME} ${CHANNEL_NAME} FALSE "DVCPluginEntry")
+# TRUE = build as static addin (linked into libfreerdp-client), not dynamic plugin (.so)
+add_channel_client_library(${MODULE_PREFIX} ${MODULE_NAME} ${CHANNEL_NAME} TRUE "DVCPluginEntry")
 
 if(V4L_FOUND)
   add_channel_client_subsystem(${MODULE_PREFIX} ${CHANNEL_NAME} "v4l" "")
