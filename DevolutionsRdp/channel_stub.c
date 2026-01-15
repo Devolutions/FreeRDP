@@ -36,9 +36,8 @@ extern "C"
 #endif
 
 	/* Forward declaration of the static addin loader function */
-	typedef void* (*FREERDP_LOAD_CHANNEL_ADDIN_ENTRY_FN)(const char*, const char*, const char*,
-	                                                      unsigned long);
-	extern FREERDP_LOAD_CHANNEL_ADDIN_ENTRY_FN freerdp_channels_load_static_addin_entry;
+	extern void* freerdp_channels_load_static_addin_entry(const char*, const char*, const char*,
+	                                                       unsigned long);
 
 	/* rdpecam channel entry points - these need explicit references */
 	extern unsigned int rdpecam_DVCPluginEntry(void* pEntryPoints);
