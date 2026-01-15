@@ -29,6 +29,6 @@ if(WITH_V4L)
 
   include_directories(..)
 
-  add_channel_client_subsystem_library(${MODULE_PREFIX} ${MODULE_NAME} ${CHANNEL_NAME} "" TRUE "")
+  add_channel_client_subsystem_library(${MODULE_PREFIX} ${MODULE_NAME} ${CHANNEL_NAME} "" FALSE "")
 
 endif()
