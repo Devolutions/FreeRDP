@@ -33,6 +33,9 @@
 
 #define RESIZE_MIN_DELAY 200 /* minimum delay in ms between two resizes */
 
+/* Force linker to include static channel symbols */
+extern void devolutions_rdp_force_static_channel_symbols(void);
+
 static BOOL cs_pre_connect(freerdp* instance);
 static BOOL cs_post_connect(freerdp* instance);
 static void cs_post_disconnect(freerdp* instance);
@@ -639,6 +642,9 @@ BOOL csharp_configure_log_file(int wlogLevel, const char* logPath, const char* l
 BOOL cs_client_global_init(void)
 {
 	BOOL result = TRUE;
+
+	/* Force linker to include static channel symbols from freerdp-client.a */
+	devolutions_rdp_force_static_channel_symbols();
 
 #ifdef WIN32
 	WSADATA wsaData;
