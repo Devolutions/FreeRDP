@@ -22,6 +22,9 @@
 #include "headless.h"
 #include "virtualchannel.h"
 
+/* Stub function that forces static channel symbols to be linked */
+extern void devolutions_rdp_force_static_channel_symbols(void);
+
 #define TAG "DevolutionsRdp"
 
 #ifndef _WIN32
@@ -776,6 +779,9 @@ void* csharp_freerdp_new()
 	
 	context = freerdp_client_context_new(&clientEntryPoints)->instance;
 	freerdp_register_addin_provider(cs_channels_load_static_addin_entry, 0);
+
+	/* Force static channel symbols to be linked (rdpecam, v4l, etc.) */
+	devolutions_rdp_force_static_channel_symbols();
 
 	return context;
 }
