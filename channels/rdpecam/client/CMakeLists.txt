@@ -53,7 +53,15 @@ if(WITH_SWSCALE_LOADING)
   # Find libavutil for image utility functions (av_image_fill_linesizes, av_image_fill_pointers)
   # Note: libavutil is LGPL licensed, safe to link dynamically (no GPL contamination)
   find_package(FFmpeg COMPONENTS AVUTIL)
-  if(NOT AVUTIL_FOUND)
+
+  # Debug output
+  message(STATUS "rdpecam: FFmpeg find results:")
+  message(STATUS "  AVUTIL_FOUND = ${AVUTIL_FOUND}")
+  message(STATUS "  FFmpeg_AVUTIL_FOUND = ${FFmpeg_AVUTIL_FOUND}")
+  message(STATUS "  AVUTIL_LIBRARIES = ${AVUTIL_LIBRARIES}")
+  message(STATUS "  AVUTIL_INCLUDE_DIRS = ${AVUTIL_INCLUDE_DIRS}")
+
+  if(NOT AVUTIL_FOUND AND NOT FFmpeg_AVUTIL_FOUND)
     message(FATAL_ERROR
       "libavutil is required for rdpecam channel.\n"
       "Install: sudo apt-get install libavutil-dev (Debian/Ubuntu)\n"
