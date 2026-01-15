@@ -71,14 +71,6 @@ volatile const void* devolutions_rdp_static_channel_symbols[] = {
 };
 
 /**
- * Separate reference to subsystem table to prevent section garbage collection.
- * This must be in a different symbol than the above array to avoid triggering
- * duplicate object file inclusion from the .a archive.
- */
-volatile const void* devolutions_rdp_rdpecam_subsystem_table_ref =
-	(const void*)CLIENT_RDPECAM_SUBSYSTEM_TABLE;
-
-/**
  * Force linker to include static channel entry points.
  * This function uses volatile to prevent the compiler from optimizing away
  * the symbol references.
@@ -88,4 +80,8 @@ void devolutions_rdp_force_static_channel_symbols(void)
 	/* Access the volatile array to ensure it's not optimized away */
 	volatile const void* ptr = devolutions_rdp_static_channel_symbols[0];
 	(void)ptr;
+
+	/* Access subsystem table at runtime to prevent section garbage collection */
+	volatile const void* table_ref = (const void*)CLIENT_RDPECAM_SUBSYSTEM_TABLE;
+	(void)table_ref;
 }
