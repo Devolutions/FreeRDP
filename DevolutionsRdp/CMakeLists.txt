@@ -57,7 +57,7 @@ set(TARGET_TYPE "SHARED")
 
 add_library(${MODULE_NAME} ${TARGET_TYPE} ${${MODULE_PREFIX}_HEADERS} ${${MODULE_PREFIX}_SOURCES} ${${MODULE_PREFIX}_RESOURCES})
 
-# Link libraries normally - channel_stub.c will force inclusion of static channel symbols
+# Link libraries normally
 target_link_libraries(${MODULE_NAME} PRIVATE freerdp freerdp-client winpr)
 
 # if (NOT DEFINED PNG_LIBRARY AND APPLE AND NOT IOS)
