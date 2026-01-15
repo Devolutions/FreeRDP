@@ -61,10 +61,12 @@ add_library(${MODULE_NAME} ${TARGET_TYPE} ${${MODULE_PREFIX}_HEADERS} ${${MODULE
 # Link libraries normally
 target_link_libraries(${MODULE_NAME} PRIVATE freerdp freerdp-client winpr)
 
-# Force linker to keep rdpecam subsystem table (prevent --gc-sections from discarding it)
+# Disable section garbage collection to keep all static channel symbols
+# This ensures subsystem tables like CLIENT_RDPECAM_SUBSYSTEM_TABLE are not discarded
 if(NOT MSVC)
-	target_link_options(${MODULE_NAME} PRIVATE
-		"LINKER:--undefined=CLIENT_RDPECAM_SUBSYSTEM_TABLE")
+	# Remove --gc-sections if it's enabled globally
+	string(REPLACE "-Wl,--gc-sections" "" CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS}")
+	set_target_properties(${MODULE_NAME} PROPERTIES LINK_FLAGS "-Wl,--no-gc-sections")
 endif()
 
 # if (NOT DEFINED PNG_LIBRARY AND APPLE AND NOT IOS)
