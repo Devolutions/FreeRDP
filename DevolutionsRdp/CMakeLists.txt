@@ -24,7 +24,6 @@ set(${MODULE_PREFIX}_SOURCES
 	headless.c
 	cursor.c
 	virtualchannel.c
-	channel_stub.c
 	DevolutionsRdp.c)
 
 set(${MODULE_PREFIX}_RESOURCES "")

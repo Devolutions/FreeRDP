@@ -22,9 +22,6 @@
 #include "headless.h"
 #include "virtualchannel.h"
 
-/* Stub function that forces static channel symbols to be linked */
-extern void devolutions_rdp_force_static_channel_symbols(void);
-
 #define TAG "DevolutionsRdp"
 
 #ifndef _WIN32
@@ -780,9 +777,6 @@ void* csharp_freerdp_new()
 	context = freerdp_client_context_new(&clientEntryPoints)->instance;
 	freerdp_register_addin_provider(cs_channels_load_static_addin_entry, 0);
 
-	/* Force static channel symbols to be linked (rdpecam, v4l, etc.) */
-	devolutions_rdp_force_static_channel_symbols();
-
 	return context;
 }
 
@@ -992,7 +986,8 @@ void csharp_freerdp_set_redirect_cameras(void* instance, const char* devicePath)
 		char cameraArgs[256] = { 0 };
 		snprintf(cameraArgs, sizeof(cameraArgs), "device:%s", devicePath);
 		p = freerdp_command_line_parse_comma_separated_values_offset("rdpecam", cameraArgs, &count);
-		freerdp_client_add_dynamic_channel(settings, count, (const char* const*)p);
+		// Use add_static_channel to ensure rdpecam symbols are linked into binary
+		freerdp_client_add_static_channel(settings, count, p);
 		free(p);
 	}
 }
