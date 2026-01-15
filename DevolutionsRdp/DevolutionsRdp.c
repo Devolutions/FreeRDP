@@ -340,6 +340,12 @@ static BOOL cs_pre_connect(freerdp* instance)
 	settings->OrderSupport[NEG_ELLIPSE_SC_INDEX] = FALSE;
 	settings->OrderSupport[NEG_ELLIPSE_CB_INDEX] = FALSE;
 
+#if defined(__linux__) && defined(CHANNEL_RDPECAM_CLIENT)
+	// Auto-enable camera redirection on Linux for testing
+	// Redirect all available cameras (use "*" for all devices)
+	csharp_freerdp_set_redirect_cameras(instance, "*");
+#endif
+
 	if (!freerdp_client_load_addins(context->channels, context->settings))
 			return -1;
 
@@ -964,6 +970,24 @@ void csharp_freerdp_set_redirect_audio(void* instance, int redirectSound, BOOL r
 		freerdp_client_add_dynamic_channel(settings, count, p);
 		free(p);
 		free(rdpAudinCli);
+	}
+}
+
+void csharp_freerdp_set_redirect_cameras(void* instance, const char* devicePath)
+{
+	freerdp* inst = (freerdp*) instance;
+	rdpSettings* settings = inst->context->settings;
+	char** p = NULL;
+	size_t count = 0;
+
+	if (devicePath && strlen(devicePath) > 0)
+	{
+		// Format: rdpecam,device:/dev/video0 or rdpecam,device:*
+		char cameraArgs[256] = { 0 };
+		snprintf(cameraArgs, sizeof(cameraArgs), "device:%s", devicePath);
+		p = freerdp_command_line_parse_comma_separated_values_offset("rdpecam", cameraArgs, &count);
+		freerdp_client_add_dynamic_channel(settings, count, (const char* const*)p);
+		free(p);
 	}
 }
 
