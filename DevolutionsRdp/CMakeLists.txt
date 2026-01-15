@@ -61,6 +61,12 @@ add_library(${MODULE_NAME} ${TARGET_TYPE} ${${MODULE_PREFIX}_HEADERS} ${${MODULE
 # Link libraries normally
 target_link_libraries(${MODULE_NAME} PRIVATE freerdp freerdp-client winpr)
 
+# Force linker to keep rdpecam subsystem table (prevent --gc-sections from discarding it)
+if(NOT MSVC)
+	target_link_options(${MODULE_NAME} PRIVATE
+		"LINKER:--undefined=CLIENT_RDPECAM_SUBSYSTEM_TABLE")
+endif()
+
 # if (NOT DEFINED PNG_LIBRARY AND APPLE AND NOT IOS)
 # 	find_library(PNG_LIBRARY png)
 # 	message(STATUS "PNG_LIBRARY = ${PNG_LIBRARY}")
