@@ -54,20 +54,39 @@ if(WITH_SWSCALE_LOADING)
   # Note: libavutil is LGPL licensed, safe to link dynamically (no GPL contamination)
   find_package(FFmpeg COMPONENTS AVUTIL)
 
-  # Debug output
-  message(STATUS "rdpecam: FFmpeg find results:")
-  message(STATUS "  AVUTIL_FOUND = ${AVUTIL_FOUND}")
-  message(STATUS "  FFmpeg_AVUTIL_FOUND = ${FFmpeg_AVUTIL_FOUND}")
-  message(STATUS "  AVUTIL_LIBRARIES = ${AVUTIL_LIBRARIES}")
-  message(STATUS "  AVUTIL_INCLUDE_DIRS = ${AVUTIL_INCLUDE_DIRS}")
+  # Fallback: if FindFFmpeg fails (e.g., no pkg-config), try manual search
+  if(NOT AVUTIL_FOUND AND NOT FFmpeg_AVUTIL_FOUND)
+    message(STATUS "rdpecam: FFmpeg module failed, trying manual search for libavutil...")
+
+    find_path(AVUTIL_INCLUDE_DIRS
+      NAMES libavutil/avutil.h
+      PATHS /usr/include /usr/local/include
+      PATH_SUFFIXES ffmpeg
+    )
+
+    find_library(AVUTIL_LIBRARIES
+      NAMES avutil
+      PATHS /usr/lib /usr/local/lib /usr/lib/x86_64-linux-gnu /usr/lib/aarch64-linux-gnu
+    )
+
+    if(AVUTIL_INCLUDE_DIRS AND AVUTIL_LIBRARIES)
+      set(AVUTIL_FOUND TRUE)
+      message(STATUS "rdpecam: Found libavutil manually")
+      message(STATUS "  AVUTIL_LIBRARIES = ${AVUTIL_LIBRARIES}")
+      message(STATUS "  AVUTIL_INCLUDE_DIRS = ${AVUTIL_INCLUDE_DIRS}")
+    endif()
+  endif()
 
   if(NOT AVUTIL_FOUND AND NOT FFmpeg_AVUTIL_FOUND)
     message(FATAL_ERROR
       "libavutil is required for rdpecam channel.\n"
-      "Install: sudo apt-get install libavutil-dev (Debian/Ubuntu)\n"
-      "         sudo dnf install ffmpeg-devel (Fedora)\n"
-      "         sudo pacman -S ffmpeg (Arch)\n"
       "\n"
+      "Install dependencies:\n"
+      "  sudo apt-get install pkg-config libavutil-dev (Debian/Ubuntu)\n"
+      "  sudo dnf install pkgconfig ffmpeg-devel (Fedora)\n"
+      "  sudo pacman -S pkgconfig ffmpeg (Arch)\n"
+      "\n"
+      "Note: pkg-config is needed for CMake to find FFmpeg libraries.\n"
       "Note: libavutil is LGPL licensed (not GPL), safe to link with Apache 2.0 code.\n"
       "Only libswscale (GPL) is loaded at runtime, avoiding license contamination.")
   endif()
