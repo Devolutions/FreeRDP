@@ -56,7 +56,19 @@ endif()
 set(TARGET_TYPE "SHARED")
 
 add_library(${MODULE_NAME} ${TARGET_TYPE} ${${MODULE_PREFIX}_HEADERS} ${${MODULE_PREFIX}_SOURCES} ${${MODULE_PREFIX}_RESOURCES})
-target_link_libraries(${MODULE_NAME} freerdp freerdp-client winpr)
+
+# Link freerdp-client with --whole-archive to include all static channel symbols
+# This is required for static channels (rdpecam, rdpsnd, etc.) to be available at runtime
+if(APPLE)
+	# macOS: use -force_load
+	target_link_libraries(${MODULE_NAME} freerdp -Wl,-force_load,$<TARGET_FILE:freerdp-client> winpr)
+elseif(MSVC)
+	# MSVC: use /WHOLEARCHIVE
+	target_link_libraries(${MODULE_NAME} freerdp -WHOLEARCHIVE:freerdp-client winpr)
+else()
+	# Linux/GCC: use --whole-archive
+	target_link_libraries(${MODULE_NAME} freerdp -Wl,--whole-archive freerdp-client -Wl,--no-whole-archive winpr)
+endif()
 
 # if (NOT DEFINED PNG_LIBRARY AND APPLE AND NOT IOS)
 # 	find_library(PNG_LIBRARY png)
