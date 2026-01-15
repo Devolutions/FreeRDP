@@ -59,16 +59,19 @@ add_library(${MODULE_NAME} ${TARGET_TYPE} ${${MODULE_PREFIX}_HEADERS} ${${MODULE
 
 # Link with special handling for static channels
 # We need --whole-archive for freerdp-client to ensure static channel symbols are included
+# IMPORTANT: freerdp-client must appear ONLY in --whole-archive, not as a regular link target
 if(APPLE)
 	# macOS: use -force_load (only for freerdp-client, not freerdp)
-	target_link_libraries(${MODULE_NAME} PRIVATE freerdp -Wl,-force_load,$<TARGET_FILE:freerdp-client> winpr)
+	target_link_libraries(${MODULE_NAME} PRIVATE freerdp winpr)
+	target_link_options(${MODULE_NAME} PRIVATE "LINKER:-force_load,$<TARGET_FILE:freerdp-client>")
 elseif(MSVC)
 	# MSVC: use /WHOLEARCHIVE
 	target_link_libraries(${MODULE_NAME} PRIVATE freerdp winpr)
 	target_link_options(${MODULE_NAME} PRIVATE /WHOLEARCHIVE:freerdp-client)
 else()
 	# Linux/GCC: use --whole-archive (only for freerdp-client, not freerdp)
-	target_link_libraries(${MODULE_NAME} PRIVATE freerdp -Wl,--whole-archive freerdp-client -Wl,--no-whole-archive winpr)
+	target_link_libraries(${MODULE_NAME} PRIVATE freerdp winpr)
+	target_link_options(${MODULE_NAME} PRIVATE "LINKER:--whole-archive" "$<TARGET_FILE:freerdp-client>" "LINKER:--no-whole-archive")
 endif()
 
 # if (NOT DEFINED PNG_LIBRARY AND APPLE AND NOT IOS)
