@@ -48,21 +48,27 @@ extern "C"
 #endif
 
 /**
- * Force linker to include static channel entry points.
- * This function is never called at runtime - it exists solely to create
- * references to the channel entry points and loader function so the linker
- * includes them from the static library.
+ * Array of static channel symbols that must be included.
+ * This is intentionally non-static to prevent the linker from discarding it.
+ * The volatile qualifier prevents the compiler from optimizing away references.
  */
-const void* devolutions_rdp_force_static_channel_symbols(void)
-{
-	/* Create references to prevent linker from discarding these symbols */
-	static const void* symbols[] = {
-		/* Reference the loader function - this will pull in tables.c.o */
-		(const void*)freerdp_channels_load_static_addin_entry,
-		/* Reference the actual entry points */
-		(const void*)rdpecam_DVCPluginEntry,
-		(const void*)v4l_freerdp_rdpecam_client_subsystem_entry, NULL
-	};
+volatile const void* devolutions_rdp_static_channel_symbols[] = {
+	/* Reference the loader function - this will pull in tables.c.o */
+	(const void*)freerdp_channels_load_static_addin_entry,
+	/* Reference the actual entry points */
+	(const void*)rdpecam_DVCPluginEntry,
+	(const void*)v4l_freerdp_rdpecam_client_subsystem_entry,
+	NULL
+};
 
-	return symbols[0];
+/**
+ * Force linker to include static channel entry points.
+ * This function uses volatile to prevent the compiler from optimizing away
+ * the symbol references.
+ */
+void devolutions_rdp_force_static_channel_symbols(void)
+{
+	/* Access the volatile array to ensure it's not optimized away */
+	volatile const void* ptr = devolutions_rdp_static_channel_symbols[0];
+	(void)ptr;
 }

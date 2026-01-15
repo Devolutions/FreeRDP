@@ -23,7 +23,7 @@
 #include "virtualchannel.h"
 
 /* Forward declaration of stub function that forces static channel symbols to be linked */
-extern const void* devolutions_rdp_force_static_channel_symbols(void);
+extern void devolutions_rdp_force_static_channel_symbols(void);
 
 #define TAG "DevolutionsRdp"
 
@@ -781,7 +781,7 @@ void* csharp_freerdp_new()
 	freerdp_register_addin_provider(cs_channels_load_static_addin_entry, 0);
 
 	/* Force static channel symbols to be linked (rdpecam, etc.) */
-	(void)devolutions_rdp_force_static_channel_symbols();
+	devolutions_rdp_force_static_channel_symbols();
 
 	return context;
 }
