@@ -40,22 +40,32 @@ if(RDPECAM_INPUT_FORMAT_H264)
   add_compile_definitions("WITH_INPUT_FORMAT_H264")
 endif()
 
-option(RDPECAM_INPUT_FORMAT_MJPG "[MS-RDPECAM] Enable MJPG camera format" ON)
-if(RDPECAM_INPUT_FORMAT_MJPG)
-  add_compile_definitions("WITH_INPUT_FORMAT_MJPG")
-endif()
-
 # Handle swscale dependency based on loading mode
 if(WITH_SWSCALE_LOADING)
-  # Runtime loading - no need to find or link FFmpeg/swscale at build time
+  # Runtime loading - need FFmpeg headers for libavutil but not linking swscale
+  # MJPG format requires libavcodec which is not available with runtime loading
+  option(RDPECAM_INPUT_FORMAT_MJPG "[MS-RDPECAM] Enable MJPG camera format (NOT supported with runtime loading)" OFF)
+  if(RDPECAM_INPUT_FORMAT_MJPG)
+    message(WARNING "rdpecam: MJPG format cannot be enabled with runtime loading (requires libavcodec)")
+    set(RDPECAM_INPUT_FORMAT_MJPG OFF CACHE BOOL "" FORCE)
+  endif()
+
+  find_package(FFmpeg REQUIRED COMPONENTS AVUTIL)
+  include_directories(SYSTEM ${AVUTIL_INCLUDE_DIRS})
   message(STATUS "rdpecam: Using runtime swscale loading (FFmpeg optional at runtime)")
-  set(${MODULE_PREFIX}_LIBS freerdp winpr ${FFMPEG_LIBRARIES})
+  message(STATUS "rdpecam: MJPG format disabled (requires libavcodec, not supported with runtime loading)")
+  set(${MODULE_PREFIX}_LIBS freerdp winpr ${AVUTIL_LIBRARIES})
 else()
   # Direct linking - find and link FFmpeg/swscale
-  find_package(FFmpeg REQUIRED COMPONENTS SWSCALE)
-  include_directories(SYSTEM ${SWSCALE_INCLUDE_DIRS})
+  option(RDPECAM_INPUT_FORMAT_MJPG "[MS-RDPECAM] Enable MJPG camera format" ON)
+  if(RDPECAM_INPUT_FORMAT_MJPG)
+    add_compile_definitions("WITH_INPUT_FORMAT_MJPG")
+  endif()
+
+  find_package(FFmpeg REQUIRED COMPONENTS SWSCALE AVUTIL AVCODEC)
+  include_directories(SYSTEM ${SWSCALE_INCLUDE_DIRS} ${AVUTIL_INCLUDE_DIRS} ${AVCODEC_INCLUDE_DIRS})
   freerdp_client_pc_add_requires_private("libswscale")
-  set(${MODULE_PREFIX}_LIBS freerdp winpr ${SWSCALE_LIBRARIES} ${FFMPEG_LIBRARIES})
+  set(${MODULE_PREFIX}_LIBS freerdp winpr ${SWSCALE_LIBRARIES} ${AVUTIL_LIBRARIES} ${AVCODEC_LIBRARIES})
 endif()
 
 set(${MODULE_PREFIX}_SRCS camera_device_enum_main.c camera_device_main.c encoding.c)

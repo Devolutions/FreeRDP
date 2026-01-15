@@ -25,7 +25,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#if defined(WITH_INPUT_FORMAT_MJPG)
+/* libavcodec is only available when NOT using runtime loading (MJPG disabled with runtime loading) */
+#if defined(WITH_INPUT_FORMAT_MJPG) && !defined(WITH_SWSCALE_LOADING)
 #include <libavcodec/avcodec.h>
 #endif
 
@@ -34,6 +35,8 @@
 #else
 #include <libswscale/swscale.h>
 #endif
+
+/* libavutil is always available (found by CMake even with runtime loading) */
 #include <libavutil/imgutils.h>
 
 #include <winpr/wlog.h>
@@ -110,7 +113,8 @@ typedef struct
 
 	H264_CONTEXT* h264;
 
-#if defined(WITH_INPUT_FORMAT_MJPG)
+/* MJPG codec context only available when NOT using runtime loading */
+#if defined(WITH_INPUT_FORMAT_MJPG) && !defined(WITH_SWSCALE_LOADING)
 	AVCodecContext* avContext;
 	AVPacket* avInputPkt;
 	AVFrame* avOutFrame;
