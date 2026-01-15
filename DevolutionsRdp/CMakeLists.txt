@@ -58,17 +58,17 @@ set(TARGET_TYPE "SHARED")
 add_library(${MODULE_NAME} ${TARGET_TYPE} ${${MODULE_PREFIX}_HEADERS} ${${MODULE_PREFIX}_SOURCES} ${${MODULE_PREFIX}_RESOURCES})
 
 # Link with special handling for static channels
-# Use --whole-archive ONLY for freerdp-client to include all static channel symbols
-# freerdp-client depends on freerdp, so we don't need to link freerdp explicitly
+# Use --whole-archive for freerdp-client to include all static channel symbols
+# freerdp-client transitively depends on freerdp, so it will be pulled in automatically
 if(APPLE)
-	# macOS: -all_load freerdp-client, then link its dependencies normally
-	target_link_libraries(${MODULE_NAME} PRIVATE -Wl,-all_load freerdp-client -Wl,-noall_load freerdp winpr)
+	# macOS: -all_load freerdp-client only
+	target_link_libraries(${MODULE_NAME} PRIVATE -Wl,-all_load freerdp-client -Wl,-noall_load winpr)
 elseif(MSVC)
 	# MSVC: use /WHOLEARCHIVE for freerdp-client only
-	target_link_libraries(${MODULE_NAME} PRIVATE /WHOLEARCHIVE:freerdp-client freerdp winpr)
+	target_link_libraries(${MODULE_NAME} PRIVATE /WHOLEARCHIVE:freerdp-client winpr)
 else()
-	# Linux/GCC: wrap only freerdp-client with --whole-archive, then link dependencies
-	target_link_libraries(${MODULE_NAME} PRIVATE -Wl,--whole-archive freerdp-client -Wl,--no-whole-archive freerdp winpr)
+	# Linux/GCC: wrap only freerdp-client with --whole-archive
+	target_link_libraries(${MODULE_NAME} PRIVATE -Wl,--whole-archive freerdp-client -Wl,--no-whole-archive winpr)
 endif()
 
 # if (NOT DEFINED PNG_LIBRARY AND APPLE AND NOT IOS)
