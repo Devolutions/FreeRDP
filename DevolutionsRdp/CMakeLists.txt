@@ -24,7 +24,6 @@ set(${MODULE_PREFIX}_SOURCES
 	headless.c
 	cursor.c
 	virtualchannel.c
-	channel_stub.c
 	DevolutionsRdp.c)
 
 set(${MODULE_PREFIX}_RESOURCES "")
@@ -58,7 +57,19 @@ set(TARGET_TYPE "SHARED")
 
 add_library(${MODULE_NAME} ${TARGET_TYPE} ${${MODULE_PREFIX}_HEADERS} ${${MODULE_PREFIX}_SOURCES} ${${MODULE_PREFIX}_RESOURCES})
 
-target_link_libraries(${MODULE_NAME} freerdp freerdp-client winpr)
+# Link with special handling for static channels
+# We need --whole-archive for freerdp-client to ensure static channel symbols are included
+if(APPLE)
+	# macOS: use -force_load (only for freerdp-client, not freerdp)
+	target_link_libraries(${MODULE_NAME} PRIVATE freerdp -Wl,-force_load,$<TARGET_FILE:freerdp-client> winpr)
+elseif(MSVC)
+	# MSVC: use /WHOLEARCHIVE
+	target_link_libraries(${MODULE_NAME} PRIVATE freerdp winpr)
+	target_link_options(${MODULE_NAME} PRIVATE /WHOLEARCHIVE:freerdp-client)
+else()
+	# Linux/GCC: use --whole-archive (only for freerdp-client, not freerdp)
+	target_link_libraries(${MODULE_NAME} PRIVATE freerdp -Wl,--whole-archive freerdp-client -Wl,--no-whole-archive winpr)
+endif()
 
 # if (NOT DEFINED PNG_LIBRARY AND APPLE AND NOT IOS)
 # 	find_library(PNG_LIBRARY png)
