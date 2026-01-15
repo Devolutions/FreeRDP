@@ -43,14 +43,8 @@ extern "C"
 	extern unsigned int rdpecam_DVCPluginEntry(void* pEntryPoints);
 	extern unsigned int v4l_freerdp_rdpecam_client_subsystem_entry(void* pEntryPoints);
 
-	/* Forward declare subsystem table to prevent linker from stripping it */
-	typedef struct
-	{
-		const char* name;
-		const char* type;
-		unsigned int (*entry)(void*);
-	} STATIC_SUBSYSTEM_ENTRY;
-	extern const STATIC_SUBSYSTEM_ENTRY CLIENT_RDPECAM_SUBSYSTEM_TABLE[];
+	/* Weak reference to subsystem table to prevent section garbage collection */
+	__attribute__((weak)) extern const void* CLIENT_RDPECAM_SUBSYSTEM_TABLE[];
 
 #ifdef __cplusplus
 }
@@ -67,6 +61,8 @@ volatile const void* devolutions_rdp_static_channel_symbols[] = {
 	/* Reference the actual entry points */
 	(const void*)rdpecam_DVCPluginEntry,
 	(const void*)v4l_freerdp_rdpecam_client_subsystem_entry,
+	/* Weak reference to subsystem table - prevents --gc-sections from discarding it */
+	(const void*)CLIENT_RDPECAM_SUBSYSTEM_TABLE,
 	NULL
 };
 
@@ -80,8 +76,4 @@ void devolutions_rdp_force_static_channel_symbols(void)
 	/* Access the volatile array to ensure it's not optimized away */
 	volatile const void* ptr = devolutions_rdp_static_channel_symbols[0];
 	(void)ptr;
-
-	/* Access subsystem table at runtime to prevent section garbage collection */
-	volatile const void* table_ref = (const void*)CLIENT_RDPECAM_SUBSYSTEM_TABLE;
-	(void)table_ref;
 }
