@@ -17,8 +17,13 @@
 
 define_channel_client("rdpecam")
 
-if(NOT WITH_SWSCALE OR NOT WITH_FFMPEG)
-  message(FATAL_ERROR "WITH_FFMPEG and WITH_SWSCALE required for CHANNEL_RDPECAM_CLIENT")
+if(NOT WITH_SWSCALE)
+  message(FATAL_ERROR "WITH_SWSCALE required for CHANNEL_RDPECAM_CLIENT")
+endif()
+
+# WITH_FFMPEG only required when NOT using runtime loading
+if(NOT WITH_SWSCALE_LOADING AND NOT WITH_FFMPEG)
+  message(FATAL_ERROR "WITH_FFMPEG required for CHANNEL_RDPECAM_CLIENT when WITH_SWSCALE_LOADING=OFF")
 endif()
 
 # currently camera redirect client supported for platforms with Video4Linux only
