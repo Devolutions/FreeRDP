@@ -43,6 +43,15 @@ extern "C"
 	extern unsigned int rdpecam_DVCPluginEntry(void* pEntryPoints);
 	extern unsigned int v4l_freerdp_rdpecam_client_subsystem_entry(void* pEntryPoints);
 
+	/* Forward declare subsystem table to prevent linker from stripping it */
+	typedef struct
+	{
+		const char* name;
+		const char* type;
+		unsigned int (*entry)(void*);
+	} STATIC_SUBSYSTEM_ENTRY;
+	extern const STATIC_SUBSYSTEM_ENTRY CLIENT_RDPECAM_SUBSYSTEM_TABLE[];
+
 #ifdef __cplusplus
 }
 #endif
@@ -60,6 +69,14 @@ volatile const void* devolutions_rdp_static_channel_symbols[] = {
 	(const void*)v4l_freerdp_rdpecam_client_subsystem_entry,
 	NULL
 };
+
+/**
+ * Separate reference to subsystem table to prevent section garbage collection.
+ * This must be in a different symbol than the above array to avoid triggering
+ * duplicate object file inclusion from the .a archive.
+ */
+volatile const void* devolutions_rdp_rdpecam_subsystem_table_ref =
+	(const void*)CLIENT_RDPECAM_SUBSYSTEM_TABLE;
 
 /**
  * Force linker to include static channel entry points.
