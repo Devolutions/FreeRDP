@@ -96,7 +96,6 @@ extern "C"
 	 *
 	 * @return TRUE if video codecs are available (FFmpeg loaded)
 	 */
-	WINPR_ATTR_NODISCARD
 	FREERDP_API BOOL freerdp_video_available(void);
 
 	/**
@@ -106,7 +105,6 @@ extern "C"
 	 * @param dstFormat Destination video format
 	 * @return TRUE if conversion is supported, FALSE otherwise
 	 */
-	WINPR_ATTR_NODISCARD
 	FREERDP_API BOOL freerdp_video_conversion_supported(FREERDP_VIDEO_FORMAT srcFormat,
 	                                                    FREERDP_VIDEO_FORMAT dstFormat);
 
@@ -129,7 +127,6 @@ extern "C"
 	 * freerdp_video_context_reconfigure(ctx, 1920, 1080, 30, 0,
 	 *                                      H264_CAMERA_VIDEO_REAL_TIME);
 	 */
-	WINPR_ATTR_NODISCARD
 	FREERDP_API BOOL freerdp_video_context_reconfigure(FREERDP_VIDEO_CONTEXT* context, UINT32 width,
 	                                                   UINT32 height, UINT32 framerate,
 	                                                   UINT32 bitrate, UINT32 usageType);
@@ -173,7 +170,6 @@ extern "C"
 	 * // Cleanup
 	 * freerdp_video_context_free(ctx);
 	 */
-	WINPR_ATTR_NODISCARD
 	FREERDP_API BOOL freerdp_video_sample_convert(FREERDP_VIDEO_CONTEXT* context,
 	                                              FREERDP_VIDEO_FORMAT srcFormat,
 	                                              const void* srcSampleData, size_t srcSampleLength,
