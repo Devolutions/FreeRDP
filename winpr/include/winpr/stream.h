@@ -1307,6 +1307,19 @@ extern "C"
 		return WINPR_STREAM_CAST(size_t, (_s->pointer - _s->buffer));
 	}
 
+	/**
+	 * @brief Reset stream position to the beginning
+	 *
+	 * @param _s A stream to reset the position on. Must not be NULL
+	 *
+	 * @since version 3.24.0
+	 */
+	static inline void Stream_ResetPosition(wStream* _s)
+	{
+		WINPR_ASSERT(_s);
+		_s->pointer = _s->buffer;
+	}
+
 	WINPR_API BOOL Stream_SetPosition(wStream* _s, size_t _p);
 
 	WINPR_API void Stream_SealLength(wStream* _s);

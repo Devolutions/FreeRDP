@@ -122,7 +122,6 @@ static void ecam_dev_print_media_type(CAM_MEDIA_TYPE_DESCRIPTION* mediaType)
  *
  * @return 0 on success, otherwise a Win32 error code
  */
-WINPR_ATTR_NODISCARD
 static wStream* ecam_dev_prepare_sample_response(CameraDevice* dev, size_t streamIndex)
 {
 	WINPR_ASSERT(dev);
