@@ -71,8 +71,8 @@ typedef struct
 	BOOL available;
 } AVUTIL_LIBRARY;
 
-static SWSCALE_LIBRARY g_swscale = WINPR_C_ARRAY_INIT;
-static AVUTIL_LIBRARY g_avutil = WINPR_C_ARRAY_INIT;
+static SWSCALE_LIBRARY g_swscale = {0};
+static AVUTIL_LIBRARY g_avutil = {0};
 
 #define STRINGIFY(x) #x
 #define TOSTRING(x) STRINGIFY(x)
@@ -123,7 +123,7 @@ static BOOL swscale_load_library(const char* name)
 	{
 		WLog_WARN(TAG, "Failed to load required functions from %s", name);
 		FreeLibrary(g_swscale.lib);
-		g_swscale.lib = nullptr;
+		g_swscale.lib = NULL;
 		return FALSE;
 	}
 
@@ -166,7 +166,7 @@ struct SwsContext* freerdp_sws_getContext(int srcW, int srcH, int srcFormat, int
 	if (!freerdp_swscale_available())
 	{
 		WLog_WARN(TAG, "sws_getContext called but swscale not available");
-		return nullptr;
+		return NULL;
 	}
 
 	WINPR_ASSERT(g_swscale.getContext);
@@ -186,7 +186,7 @@ int freerdp_sws_scale(struct SwsContext* ctx, const uint8_t* const srcSlice[],
 
 	if (!ctx)
 	{
-		WLog_WARN(TAG, "sws_scale called with nullptr context");
+		WLog_WARN(TAG, "sws_scale called with NULL context");
 		return -1;
 	}
 
@@ -256,7 +256,7 @@ static BOOL avutil_load_library(const char* name)
 	{
 		WLog_WARN(TAG, "Failed to load required functions from %s", name);
 		FreeLibrary(g_avutil.lib);
-		g_avutil.lib = nullptr;
+		g_avutil.lib = NULL;
 		return FALSE;
 	}
 

@@ -150,7 +150,7 @@ BOOL ecam_encoder_context_free(CameraDeviceStream* stream)
 	if (stream->video)
 	{
 		freerdp_video_context_free(stream->video);
-		stream->video = nullptr;
+		stream->video = NULL;
 	}
 
 	return TRUE;
