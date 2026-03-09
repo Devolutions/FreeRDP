@@ -163,7 +163,7 @@ extern "C"
 	 * // Convert MJPEG sample to H.264 (per frame)
 	 * wStream* output = Stream_New(nullptr, 1024 * 1024);
 	 * if (freerdp_video_sample_convert(ctx, FREERDP_VIDEO_FORMAT_MJPEG,
-	 *                                  mjpegData, mjpegSize, 1920, 1080,
+	 *                                  mjpegData, mjpegSize,
 	 *                                  FREERDP_VIDEO_FORMAT_H264, output))
 	 * {
 	 *     // Send Stream_Buffer(output), Stream_GetPosition(output) bytes
