@@ -242,6 +242,9 @@ fail:
 }
 #endif
 
+BYTE* freerdp_glyph_convert_ex(UINT32 width, UINT32 height, const BYTE* WINPR_RESTRICT data,
+                               size_t len);
+
 #if !defined(WITHOUT_FREERDP_3x_DEPRECATED)
 BYTE* freerdp_glyph_convert(UINT32 width, UINT32 height, const BYTE* WINPR_RESTRICT data)
 {
