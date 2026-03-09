@@ -159,6 +159,7 @@ static enum AVPixelFormat video_format_to_av(FREERDP_VIDEO_FORMAT format)
 	}
 }
 
+#if defined(WITH_MJPEG_DECODER)
 /**
  * @brief Map AVPixelFormat to FREERDP_VIDEO_FORMAT
  */
@@ -218,114 +219,11 @@ static FREERDP_VIDEO_FORMAT av_format_to_video(enum AVPixelFormat format)
 			return FREERDP_VIDEO_FORMAT_NONE;
 	}
 }
+#endif
 
 BOOL freerdp_video_available(void)
 {
 	return freerdp_swscale_available() && freerdp_avutil_available();
-}
-
-static size_t demux_uvcH264(const BYTE* srcData, size_t srcSize, BYTE* h264_data,
-                            size_t h264_max_size)
-{
-	WINPR_ASSERT(h264_data);
-	WINPR_ASSERT(srcData);
-
-	if (srcSize < 30)
-	{
-		WLog_ERR(TAG, "Expected srcSize >= 30, got %" PRIuz, srcSize);
-		return 0;
-	}
-	const uint8_t* spl = NULL;
-	uint8_t* ph264 = h264_data;
-
-	for (const uint8_t* sp = srcData; sp < srcData + srcSize - 30; sp++)
-	{
-		if (sp[0] == 0xFF && sp[1] == 0xE4)
-		{
-			spl = sp + 2;
-			break;
-		}
-	}
-
-	if (spl == NULL)
-	{
-		WLog_ERR(TAG, "Expected 1st APP4 marker but none found");
-		return 0;
-	}
-
-	if (spl > srcData + srcSize - 4)
-	{
-		WLog_ERR(TAG, "Payload + Header size bigger than srcData buffer");
-		return 0;
-	}
-
-	uint16_t length = (uint16_t)(spl[0] << 8) & UINT16_MAX;
-	length |= (uint16_t)spl[1];
-
-	spl += 2;
-	uint16_t header_length = (uint16_t)spl[2];
-	header_length |= (uint16_t)spl[3] << 8;
-
-	spl += header_length;
-	if (spl > srcData + srcSize)
-	{
-		WLog_ERR(TAG, "Header size bigger than srcData buffer");
-		return 0;
-	}
-
-	uint32_t payload_size = (uint32_t)spl[0] << 0;
-	payload_size |= (uint32_t)spl[1] << 8;
-	payload_size |= (uint32_t)spl[2] << 16;
-	payload_size |= (uint32_t)spl[3] << 24;
-
-	if (payload_size > h264_max_size)
-	{
-		WLog_ERR(TAG, "Payload size bigger than h264_data buffer");
-		return 0;
-	}
-
-	spl += 4;
-	const uint8_t* epl = spl + payload_size;
-
-	if (epl > srcData + srcSize)
-	{
-		WLog_ERR(TAG, "Payload size bigger than srcData buffer");
-		return 0;
-	}
-
-	length -= header_length + 6;
-
-	memcpy(ph264, spl, length);
-	ph264 += length;
-	spl += length;
-
-	while (epl > spl + 4)
-	{
-		if (spl[0] != 0xFF || spl[1] != 0xE4)
-		{
-			WLog_ERR(TAG, "Expected 2nd+ APP4 marker but none found");
-			const intptr_t diff = ph264 - h264_data;
-			return WINPR_ASSERTING_INT_CAST(size_t, diff);
-		}
-
-		length = (uint16_t)(spl[2] << 8) & UINT16_MAX;
-		length |= (uint16_t)spl[3];
-		if (length < 2)
-		{
-			WLog_ERR(TAG, "Expected 2nd+ APP4 length >= 2 but have %" PRIu16, length);
-			return 0;
-		}
-
-		length -= 2;
-		spl += 4;
-
-		memcpy(ph264, spl, length);
-		ph264 += length;
-		spl += length;
-	}
-
-	const intptr_t diff = ph264 - h264_data;
-	return WINPR_ASSERTING_INT_CAST(size_t, diff);
 }
 
 /* Removed - was never released, replaced by freerdp_video_conversion_supported() */
@@ -437,35 +335,6 @@ void freerdp_video_context_free(FREERDP_VIDEO_CONTEXT* context)
 	}
 
 	free(context);
-}
-
-static BOOL freerdp_video_context_reset(FREERDP_VIDEO_CONTEXT* context, UINT32 width, UINT32 height)
-{
-	if (!context)
-		return FALSE;
-
-	/* Free existing swscale context if dimensions changed */
-	if (context->sws && (context->width != width || context->height != height))
-	{
-		freerdp_sws_freeContext(context->sws);
-		context->sws = NULL;
-	}
-
-	context->width = width;
-	context->height = height;
-
-#if defined(WITH_MJPEG_DECODER)
-	if (context->mjpegDecoder)
-	{
-		context->mjpegDecoder->width = (int)width;
-		context->mjpegDecoder->height = (int)height;
-	}
-#endif
-
-	if (context->h264Configured)
-		context->h264Configured = FALSE;
-
-	return TRUE;
 }
 
 static UINT32 video_get_h264_bitrate(UINT32 height)
@@ -678,7 +547,12 @@ BOOL freerdp_video_sample_convert(FREERDP_VIDEO_CONTEXT* context, FREERDP_VIDEO_
 
 		if (srcCompressed)
 		{
-			if (!freerdp_video_convert_to_yuv(context, (const BYTE**)intermediate_data,
+			/* Create const-qualified array for passing to convert function */
+			const BYTE* const_intermediate_data[4] = {
+				intermediate_data[0], intermediate_data[1],
+				intermediate_data[2], intermediate_data[3]
+			};
+			if (!freerdp_video_convert_to_yuv(context, const_intermediate_data,
 			                                  intermediate_linesize, intermediate_format, yuvData,
 			                                  yuvLineSizes, yuvFormat, context->width,
 			                                  context->height))
@@ -699,7 +573,11 @@ BOOL freerdp_video_sample_convert(FREERDP_VIDEO_CONTEXT* context, FREERDP_VIDEO_
 				return FALSE;
 			}
 
-			if (!freerdp_video_convert_to_yuv(context, (const BYTE**)srcPlanes, srcStrides,
+			/* Create const-qualified array for passing to convert function */
+			const BYTE* const_srcPlanes[4] = {
+				srcPlanes[0], srcPlanes[1], srcPlanes[2], srcPlanes[3]
+			};
+			if (!freerdp_video_convert_to_yuv(context, const_srcPlanes, srcStrides,
 			                                  srcFormat, yuvData, yuvLineSizes, yuvFormat,
 			                                  context->width, context->height))
 			{
@@ -901,54 +779,6 @@ static BOOL is_compressed_format(FREERDP_VIDEO_FORMAT format)
 	return (format == FREERDP_VIDEO_FORMAT_MJPEG || format == FREERDP_VIDEO_FORMAT_H264);
 }
 
-static void freerdp_video_frame_init_compressed(FREERDP_VIDEO_FRAME* frame, FREERDP_VIDEO_FORMAT format,
-                                               BYTE* data, size_t size, UINT32 width, UINT32 height)
-{
-	WINPR_ASSERT(frame);
-	WINPR_ASSERT(is_compressed_format(format));
-
-	frame->format = format;
-	frame->width = width;
-	frame->height = height;
-	frame->compressed.data = data;
-	frame->compressed.size = size;
-}
-
-static void freerdp_video_frame_init_raw(FREERDP_VIDEO_FRAME* frame, FREERDP_VIDEO_FORMAT format,
-                                        BYTE* data[4], int linesize[4], UINT32 width, UINT32 height)
-{
-	WINPR_ASSERT(frame);
-	WINPR_ASSERT(!is_compressed_format(format));
-
-	frame->format = format;
-	frame->width = width;
-	frame->height = height;
-
-	for (size_t i = 0; i < 4; i++)
-	{
-		frame->raw.data[i] = data[i];
-		frame->raw.linesize[i] = linesize[i];
-	}
-}
-
-static void freerdp_video_frame_init_packed(FREERDP_VIDEO_FRAME* frame, FREERDP_VIDEO_FORMAT format,
-                                           BYTE* buffer, UINT32 width, UINT32 height)
-{
-	WINPR_ASSERT(frame);
-	WINPR_ASSERT(!is_compressed_format(format));
-
-	BYTE* data[4] = {0};
-	int linesize[4] = {0};
-
-	if (!freerdp_video_fill_plane_info(data, linesize, format, width, height, buffer))
-	{
-		WLog_ERR(TAG, "Failed to fill plane info for packed format");
-		return;
-	}
-
-	freerdp_video_frame_init_raw(frame, format, data, linesize, width, height);
-}
-
 BOOL freerdp_video_conversion_supported(FREERDP_VIDEO_FORMAT srcFormat,
                                         FREERDP_VIDEO_FORMAT dstFormat)
 {
@@ -979,100 +809,6 @@ BOOL freerdp_video_conversion_supported(FREERDP_VIDEO_FORMAT srcFormat,
     !defined(WITH_MEDIA_FOUNDATION) && !defined(WITH_MEDIACODEC)
 		return FALSE;
 #endif
-	}
-
-	return TRUE;
-}
-
-static BOOL freerdp_video_convert(FREERDP_VIDEO_CONTEXT* context, const FREERDP_VIDEO_FRAME* src,
-                                  FREERDP_VIDEO_FRAME* dst)
-{
-	WINPR_ASSERT(src);
-	WINPR_ASSERT(dst);
-
-	if (!freerdp_video_available())
-	{
-		WLog_ERR(TAG, "Video codecs not available");
-		return FALSE;
-	}
-
-	BYTE* intermediate_data[4] = {0};
-	int intermediate_linesize[4] = {0};
-	FREERDP_VIDEO_FORMAT intermediate_format = FREERDP_VIDEO_FORMAT_NONE;
-
-	if (is_compressed_format(src->format))
-	{
-		if (src->format == FREERDP_VIDEO_FORMAT_MJPEG)
-		{
-#if defined(WITH_MJPEG_DECODER)
-			if (!freerdp_video_decode_mjpeg(context, src->compressed.data, src->compressed.size,
-			                                intermediate_data, intermediate_linesize,
-			                                &intermediate_format))
-			{
-				WLog_ERR(TAG, "MJPEG decode failed");
-				return FALSE;
-			}
-#else
-			WLog_ERR(TAG, "MJPEG decoder not available");
-			return FALSE;
-#endif
-		}
-		else if (src->format == FREERDP_VIDEO_FORMAT_H264)
-		{
-			WLog_ERR(TAG, "H264 decoding not implemented in video API");
-			return FALSE;
-		}
-		else
-		{
-			WLog_ERR(TAG, "Unknown compressed format: %u", src->format);
-			return FALSE;
-		}
-	}
-	else
-	{
-		for (size_t i = 0; i < 4; i++)
-		{
-			intermediate_data[i] = src->raw.data[i];
-			intermediate_linesize[i] = src->raw.linesize[i];
-		}
-		intermediate_format = src->format;
-	}
-
-	BOOL needsConversion =
-	    (!is_compressed_format(dst->format) && (intermediate_format != dst->format));
-
-	if (needsConversion)
-	{
-		if (!freerdp_video_convert_to_yuv(context, (const BYTE**)intermediate_data,
-		                                  intermediate_linesize, intermediate_format,
-		                                  dst->raw.data, dst->raw.linesize, dst->format,
-		                                  dst->width, dst->height))
-		{
-			WLog_ERR(TAG, "Format conversion failed");
-			return FALSE;
-		}
-	}
-	else if (!is_compressed_format(dst->format))
-	{
-		for (size_t i = 0; i < 4; i++)
-		{
-			dst->raw.data[i] = intermediate_data[i];
-			dst->raw.linesize[i] = intermediate_linesize[i];
-		}
-	}
-
-	if (is_compressed_format(dst->format))
-	{
-		if (dst->format == FREERDP_VIDEO_FORMAT_MJPEG)
-		{
-			WLog_ERR(TAG, "MJPEG encoding not implemented in video API");
-			return FALSE;
-		}
-		else if (dst->format == FREERDP_VIDEO_FORMAT_H264)
-		{
-			WLog_ERR(TAG, "H264 encoding not implemented in video API");
-			return FALSE;
-		}
 	}
 
 	return TRUE;
