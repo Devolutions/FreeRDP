@@ -96,6 +96,9 @@ include(SetFreeRDPCMakeInstallDir)
 include(Doxygen)
 include(GetSysconfDir)
 
+# FreeRDP internal builds should always check results
+add_compile_definitions(WINPR_DEFINE_ATTR_NODISCARD)
+
 # Soname versioning
 set(BUILD_NUMBER 0)
 if($ENV{BUILD_NUMBER})
@@ -396,6 +399,7 @@ find_feature(PCSC ${PCSC_FEATURE_TYPE} ${PCSC_FEATURE_PURPOSE} ${PCSC_FEATURE_DE
 
 if(WITH_DSP_FFMPEG OR WITH_VIDEO_FFMPEG OR WITH_FFMPEG)
   find_package(FFmpeg REQUIRED COMPONENTS AVUTIL AVCODEC)
+  add_compile_definitions("WITH_FFMPEG")
 endif()
 
 find_feature(OpenH264 ${OPENH264_FEATURE_TYPE} ${OPENH264_FEATURE_PURPOSE} ${OPENH264_FEATURE_DESCRIPTION})
@@ -410,9 +414,13 @@ if(WITH_OPENCL)
   find_package(OpenCL REQUIRED)
 endif()
 
-if(WITH_OPENH264 AND NOT WITH_OPENH264_LOADING)
+if(WITH_OPENH264)
   option(WITH_OPENH264_LOADING "Use LoadLibrary to load openh264 at runtime" OFF)
-endif(WITH_OPENH264 AND NOT WITH_OPENH264_LOADING)
+endif()
+
+if(WITH_SWSCALE)
+  option(WITH_SWSCALE_LOADING "Use LoadLibrary to load swscale at runtime" OFF)
+endif()
 
 # Version check, if we have detected FFMPEG but the version is too old
 # deactivate it as sound backend.
@@ -517,7 +525,7 @@ if(FREERDP_UNIFIED_BUILD)
   endif()
 
   if(WITH_SERVER)
-    option(WITH_RDTK "build rdtk toolkit" ON)
+    option(WITH_RDTK "build rdtk toolkit" OFF)
     if(WITH_RDTK)
       add_subdirectory(rdtk)
     endif()
