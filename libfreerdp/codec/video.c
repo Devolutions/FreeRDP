@@ -774,11 +774,6 @@ static BOOL freerdp_video_fill_plane_info(BYTE* data[4], int lineSize[4], FREERD
 	return TRUE;
 }
 
-static BOOL is_compressed_format(FREERDP_VIDEO_FORMAT format)
-{
-	return (format == FREERDP_VIDEO_FORMAT_MJPEG || format == FREERDP_VIDEO_FORMAT_H264);
-}
-
 BOOL freerdp_video_conversion_supported(FREERDP_VIDEO_FORMAT srcFormat,
                                         FREERDP_VIDEO_FORMAT dstFormat)
 {
