@@ -36,6 +36,8 @@
 /* Force linker to include static channel symbols */
 extern void devolutions_rdp_force_static_channel_symbols(void);
 
+void csharp_freerdp_set_redirect_cameras(void* instance, const char* devicePath);
+
 static BOOL cs_pre_connect(freerdp* instance);
 static BOOL cs_post_connect(freerdp* instance);
 static void cs_post_disconnect(freerdp* instance);
