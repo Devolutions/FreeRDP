@@ -542,6 +542,19 @@ static BOOL openh264_load_functionpointers(H264_CONTEXT* h264, const char* name)
 	WLog_Print(h264->log, WLOG_INFO, "loaded %s %d.%d.%d", name, sysContexts->version.uMajor,
 	           sysContexts->version.uMinor, sysContexts->version.uRevision);
 
+	if (sysContexts->version.uMajor != OPENH264_MAJOR)
+	{
+		WLog_Print(
+		    h264->log, WLOG_ERROR,
+		    "OpenH264 %s %d.%d.%d ABI mismatch, compiled against %d.%d.%d",
+		    name, sysContexts->version.uMajor, sysContexts->version.uMinor,
+		    sysContexts->version.uRevision, OPENH264_MAJOR, OPENH264_MINOR,
+		    OPENH264_REVISION);
+		FreeLibrary(sysContexts->lib);
+		sysContexts->lib = nullptr;
+		return FALSE;
+	}
+
 	if ((sysContexts->version.uMajor < 1) ||
 	    ((sysContexts->version.uMajor == 1) && (sysContexts->version.uMinor < 6)))
 	{
