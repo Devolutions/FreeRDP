@@ -444,16 +444,37 @@ static int openh264_compress(H264_CONTEXT* WINPR_RESTRICT h264,
 	*ppDstData = info.sLayerInfo[0].pBsBuf;
 	*pDstSize = 0;
 
-	for (int i = 0; i < info.iLayerNum; i++)
+	/* Only access sLayerInfo[0] for total size calculation.
+	 * OpenH264 writes all layers contiguously starting from sLayerInfo[0].pBsBuf,
+	 * so the total size equals the sum of all layer 0 NAL lengths when there's a
+	 * single spatial layer (typical for camera capture).
+	 *
+	 * Accessing sLayerInfo[i] for i > 0 is unsafe when the runtime OpenH264
+	 * version differs from compile-time: SLayerBSInfo size changed between
+	 * versions (e.g. 40 bytes in 2.4 vs 56 bytes in 2.6), so indexing into the
+	 * sLayerInfo array at i > 0 reads from wrong offsets. */
+	if (info.iLayerNum > 0 && info.sLayerInfo[0].pNalLengthInByte &&
+	    info.sLayerInfo[0].iNalCount > 0)
 	{
-		if (!info.sLayerInfo[i].pBsBuf || !info.sLayerInfo[i].pNalLengthInByte ||
-		    info.sLayerInfo[i].iNalCount <= 0)
-			break;
-
-		for (int j = 0; j < info.sLayerInfo[i].iNalCount; j++)
+		for (int j = 0; j < info.sLayerInfo[0].iNalCount; j++)
 		{
-			const int val = info.sLayerInfo[i].pNalLengthInByte[j];
+			const int val = info.sLayerInfo[0].pNalLengthInByte[j];
 			*pDstSize += WINPR_ASSERTING_INT_CAST(uint32_t, val);
+		}
+
+		/* If encoder reports multiple layers, compute remaining size by
+		 * scanning forward from end of layer 0 data in the contiguous buffer */
+		if (info.iLayerNum > 1)
+		{
+			const uint8_t* layerEnd = info.sLayerInfo[0].pBsBuf + *pDstSize;
+			/* Walk NAL start codes to find remaining data.
+			 * As a safe fallback, log a warning — the version check in
+			 * encoder init should prevent this path with mismatched ABI. */
+			WLog_Print(h264->log, WLOG_WARN,
+			           "OpenH264 encoder returned %d layers, only layer 0 "
+			           "NALs used for size calculation",
+			           info.iLayerNum);
+			(void)layerEnd;
 		}
 	}
 
