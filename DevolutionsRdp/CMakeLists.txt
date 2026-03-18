@@ -24,6 +24,7 @@ set(${MODULE_PREFIX}_SOURCES
 	headless.c
 	cursor.c
 	virtualchannel.c
+	channel_stub.c
 	DevolutionsRdp.c)
 
 set(${MODULE_PREFIX}_RESOURCES "")
@@ -56,7 +57,17 @@ endif()
 set(TARGET_TYPE "SHARED")
 
 add_library(${MODULE_NAME} ${TARGET_TYPE} ${${MODULE_PREFIX}_HEADERS} ${${MODULE_PREFIX}_SOURCES} ${${MODULE_PREFIX}_RESOURCES})
-target_link_libraries(${MODULE_NAME} freerdp freerdp-client winpr)
+
+# Link libraries normally
+target_link_libraries(${MODULE_NAME} PRIVATE freerdp freerdp-client winpr)
+
+# Disable section garbage collection to keep all static channel symbols
+# This ensures subsystem tables like CLIENT_RDPECAM_SUBSYSTEM_TABLE are not discarded
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+	# Remove --gc-sections if it's enabled globally
+	string(REPLACE "-Wl,--gc-sections" "" CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS}")
+	set_target_properties(${MODULE_NAME} PROPERTIES LINK_FLAGS "-Wl,--no-gc-sections")
+endif()
 
 # if (NOT DEFINED PNG_LIBRARY AND APPLE AND NOT IOS)
 # 	find_library(PNG_LIBRARY png)
@@ -64,7 +75,7 @@ target_link_libraries(${MODULE_NAME} freerdp freerdp-client winpr)
 # endif()
 
 if (DEFINED PNG_LIBRARY)
-    target_link_libraries(${MODULE_NAME} ${PNG_LIBRARY})
+    target_link_libraries(${MODULE_NAME} PRIVATE ${PNG_LIBRARY})
 endif()
 
 # if (NOT DEFINED JPEG_LIBRARY AND APPLE AND NOT IOS)
@@ -73,15 +84,15 @@ endif()
 # endif()
 
 if (DEFINED JPEG_LIBRARY)
-    target_link_libraries(${MODULE_NAME} ${JPEG_LIBRARY})
+    target_link_libraries(${MODULE_NAME} PRIVATE ${JPEG_LIBRARY})
 endif()
 
 if(ANDROID)
-	target_link_libraries(${MODULE_NAME} log dl m)
+	target_link_libraries(${MODULE_NAME} PRIVATE log dl m)
 endif()
 
 if(WIN32)
-	target_link_libraries(${MODULE_NAME} winmm ntdsapi rpcrt4 dbghelp ncrypt shlwapi)
+	target_link_libraries(${MODULE_NAME} PRIVATE winmm ntdsapi rpcrt4 dbghelp ncrypt shlwapi)
 endif()
 
 if(APPLE)
@@ -89,19 +100,19 @@ if(APPLE)
 	find_library(AUDIO_TOOLBOX AudioToolbox)
 	find_library(CORE_FOUNDATION CoreFoundation)
 	find_library(CORE_SERVICES CoreServices)
-	target_link_libraries(${MODULE_NAME} "${CORE_AUDIO}")
-	target_link_libraries(${MODULE_NAME} "${AUDIO_TOOLBOX}")
-	target_link_libraries(${MODULE_NAME} "${CORE_FOUNDATION}")
-	target_link_libraries(${MODULE_NAME} "${CORE_SERVICES}")
+	target_link_libraries(${MODULE_NAME} PRIVATE "${CORE_AUDIO}")
+	target_link_libraries(${MODULE_NAME} PRIVATE "${AUDIO_TOOLBOX}")
+	target_link_libraries(${MODULE_NAME} PRIVATE "${CORE_FOUNDATION}")
+	target_link_libraries(${MODULE_NAME} PRIVATE "${CORE_SERVICES}")
 
 	if(IOS)
 		find_library(FOUNDATION Foundation)
-		target_link_libraries(${MODULE_NAME} "${FOUNDATION}")
+		target_link_libraries(${MODULE_NAME} PRIVATE "${FOUNDATION}")
 	endif()
 
 	if(NOT IOS)
 		find_library(AUDIO_UNIT AudioUnit)
-		target_link_libraries(${MODULE_NAME} "${AUDIO_UNIT}")
+		target_link_libraries(${MODULE_NAME} PRIVATE "${AUDIO_UNIT}")
 	endif()
 endif()
 
