@@ -343,6 +343,12 @@ static BOOL cs_pre_connect(freerdp* instance)
 	settings->OrderSupport[NEG_ELLIPSE_SC_INDEX] = FALSE;
 	settings->OrderSupport[NEG_ELLIPSE_CB_INDEX] = FALSE;
 
+#if defined(__linux__) && defined(CHANNEL_RDPECAM_CLIENT)
+	// Auto-enable camera redirection on Linux for testing
+	// Redirect all available cameras (use "*" for all devices)
+	csharp_freerdp_set_redirect_cameras(instance, "*");
+#endif
+
 	if (!freerdp_client_load_addins(context->channels, context->settings))
 			return -1;
 
