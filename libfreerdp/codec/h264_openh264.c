@@ -430,6 +430,8 @@ static int openh264_compress(H264_CONTEXT* WINPR_RESTRICT h264,
 	pic.pData[1] = WINPR_CAST_CONST_PTR_AWAY(pYUVData[1], BYTE*);
 	pic.pData[2] = WINPR_CAST_CONST_PTR_AWAY(pYUVData[2], BYTE*);
 
+	memset(&info, 0, sizeof(info));
+
 	WINPR_ASSERT((*sys->pEncoder)->EncodeFrame);
 	status = (*sys->pEncoder)->EncodeFrame(sys->pEncoder, &pic, &info);
 
@@ -444,7 +446,8 @@ static int openh264_compress(H264_CONTEXT* WINPR_RESTRICT h264,
 
 	for (int i = 0; i < info.iLayerNum; i++)
 	{
-		if (!info.sLayerInfo[i].pBsBuf || !info.sLayerInfo[i].pNalLengthInByte)
+		if (!info.sLayerInfo[i].pBsBuf || !info.sLayerInfo[i].pNalLengthInByte ||
+		    info.sLayerInfo[i].iNalCount <= 0)
 			break;
 
 		for (int j = 0; j < info.sLayerInfo[i].iNalCount; j++)
