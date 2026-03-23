@@ -1843,7 +1843,7 @@ BOOL csharp_freerdp_client_handle_touch(void* instance, UINT32 flags, INT32 fing
 	if (!rdpei)
 		return FALSE;
 
-	return csharp_freerdp_client_handle_touch(&csc->_p, flags, finger, pressure, x, y);
+	return freerdp_client_handle_touch(&csc->_p, flags, finger, pressure, x, y);
 }
 
 BOOL csharp_freerdp_register_pen(void* instance, UINT32 flags, INT32 deviceId, double maxPressure)
