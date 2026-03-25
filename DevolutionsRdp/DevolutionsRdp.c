@@ -1419,6 +1419,49 @@ exit:
 	return status;
 }
 
+BOOL csharp_freerdp_send_monitor_layout_ex(void* instance, uint32_t numMonitors,
+                                           const DISPLAY_CONTROL_MONITOR_LAYOUT* monitors)
+{
+	BOOL status = FALSE;
+	freerdp* inst = (freerdp*)instance;
+	rdpSettings* settings = inst->context->settings;
+	csContext* csc = (csContext*)inst->context;
+	int rc = CHANNEL_RC_OK;
+
+	if (!settings->DynamicResolutionUpdate || !csc->disp)
+	{
+		WLog_DBG(TAG, "send_monitor_layout_ex without disp channel");
+		goto exit;
+	}
+
+	if ((GetTickCount64() - csc->lastSentDate) < RESIZE_MIN_DELAY)
+	{
+		WLog_DBG(TAG, "send_monitor_layout_ex too fast");
+		goto exit;
+	}
+
+	if (numMonitors == 0 || !monitors)
+	{
+		WLog_ERR(TAG, "send_monitor_layout_ex invalid arguments");
+		goto exit;
+	}
+
+	rc = IFCALLRESULT(CHANNEL_RC_OK, csc->disp->SendMonitorLayout, csc->disp, numMonitors,
+	                   (DISPLAY_CONTROL_MONITOR_LAYOUT*)monitors);
+	status = rc == CHANNEL_RC_OK;
+
+	if (!status)
+	{
+		WLog_ERR(TAG, "send_monitor_layout_ex failed (%d)", rc);
+		goto exit;
+	}
+
+	csc->lastSentDate = GetTickCount64();
+
+exit:
+	return status;
+}
+
 void csharp_freerdp_send_cursor_event(void* instance, int x, int y, int flags)
 {
 	freerdp* inst = (freerdp*) instance;
