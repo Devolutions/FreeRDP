@@ -345,9 +345,6 @@ static BOOL cs_pre_connect(freerdp* instance)
 	settings->OrderSupport[NEG_ELLIPSE_SC_INDEX] = FALSE;
 	settings->OrderSupport[NEG_ELLIPSE_CB_INDEX] = FALSE;
 
-	if (!freerdp_client_load_addins(context->channels, context->settings))
-			return -1;
-
 	PubSub_SubscribeChannelConnected(context->pubSub,
 									 (pChannelConnectedEventHandler) cs_OnChannelConnectedEventHandler);
 
