@@ -145,6 +145,21 @@ static BOOL nla_decrypt_public_key_hash(rdpNla* nla);
 static BOOL nla_encrypt_ts_credentials(rdpNla* nla);
 static BOOL nla_decrypt_ts_credentials(rdpNla* nla);
 
+
+static FREERDP_ERROR_SUBSYSTEM nla_get_subsystem(const rdpNla* nla)
+{
+	const char* pkg = credssp_auth_pkg_name(nla->auth);
+
+	if (_stricmp(pkg, CREDSSP_AUTH_PKG_KERBEROS) == 0)
+		return FREERDP_ERROR_SUBSYSTEM_KERBEROS;
+	if (_stricmp(pkg, CREDSSP_AUTH_PKG_NTLM) == 0)
+		return FREERDP_ERROR_SUBSYSTEM_NTLM;
+	if (_stricmp(pkg, CREDSSP_AUTH_PKG_SPNEGO) == 0)
+		return FREERDP_ERROR_SUBSYSTEM_NEGOTIATE;
+
+	return FREERDP_ERROR_SUBSYSTEM_NLA;
+}
+
 void nla_set_early_user_auth(rdpNla* nla, BOOL earlyUserAuth)
 {
 	WINPR_ASSERT(nla);
@@ -502,7 +517,12 @@ int nla_client_begin(rdpNla* nla)
 			nla_set_state(nla, NLA_STATE_FINAL);
 			break;
 		default:
-			switch (credssp_auth_sspi_error(nla->auth))
+		{
+			const INT32 sspi_error = credssp_auth_sspi_error(nla->auth);
+			freerdp_set_error_detail(nla->rdpcontext, nla_get_subsystem(nla), (INT64)sspi_error,
+			                         GetSecurityStatusString(sspi_error), NULL);
+
+			switch (sspi_error)
 			{
 				case SEC_E_LOGON_DENIED:
 				case SEC_E_NO_CREDENTIALS:
@@ -513,6 +533,7 @@ int nla_client_begin(rdpNla* nla)
 					break;
 			}
 			return -1;
+		}
 	}
 
 	return 1;
@@ -548,7 +569,12 @@ static int nla_client_recv_nego_token(rdpNla* nla)
 		break;
 
 		default:
+		{
+			const INT32 sspi_error = credssp_auth_sspi_error(nla->auth);
+			freerdp_set_error_detail(nla->rdpcontext, nla_get_subsystem(nla), (INT64)sspi_error,
+			                         GetSecurityStatusString(sspi_error), NULL);
 			return -1;
+		}
 	}
 
 	return 1;
@@ -2204,6 +2230,8 @@ int nla_recv_pdu(rdpNla* nla, wStream* s)
 		if (nla->errorCode)
 		{
 			UINT32 code = 0;
+			const INT32 sspi_error = credssp_auth_sspi_error(nla->auth);
+			char detailBuf[256] = { 0 };
 
 			switch (nla->errorCode)
 			{
@@ -2254,6 +2282,12 @@ int nla_recv_pdu(rdpNla* nla, wStream* s)
 					code = FREERDP_ERROR_AUTHENTICATION_FAILED;
 					break;
 			}
+
+			(void)_snprintf(detailBuf, sizeof(detailBuf), "NTSTATUS: %s (0x%08" PRIx32 ")",
+			                NtStatus2Tag(nla->errorCode),
+			                WINPR_CXX_COMPAT_CAST(uint32_t, nla->errorCode));
+			freerdp_set_error_detail(nla->rdpcontext, nla_get_subsystem(nla), (INT64)sspi_error,
+			                         GetSecurityStatusString(sspi_error), detailBuf);
 
 			freerdp_set_last_error_log(nla->rdpcontext, code);
 			return -1;
