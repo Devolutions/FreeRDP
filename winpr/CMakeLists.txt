@@ -63,6 +63,8 @@ if(NOT FREERDP_UNIFIED_BUILD)
   # MSVC compatibility with system headers
   add_compile_definitions(NONAMELESSUNION)
 
+  include(FindFeature)
+
   set(OPENSSL_FEATURE_TYPE "RECOMMENDED")
   set(OPENSSL_FEATURE_PURPOSE "cryptography")
   set(OPENSSL_FEATURE_DESCRIPTION "encryption, certificate validation, hashing functions")
