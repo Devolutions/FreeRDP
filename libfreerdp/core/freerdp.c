@@ -1317,11 +1317,14 @@ BOOL freerdp_nla_revert_to_self(rdpContext* context)
 
 UINT32 freerdp_get_nla_sspi_error(const rdpContext* context)
 {
-	WINPR_ASSERT(context);
-	WINPR_ASSERT(context->rdp);
-	WINPR_ASSERT(context->rdp->transport);
+	if (!context || !context->rdp)
+		return 0;
 
-	rdpNla* nla = transport_get_nla(context->rdp->transport);
+	rdpNla* nla = context->rdp->nla;
+	if (!nla && context->rdp->transport)
+		nla = transport_get_nla(context->rdp->transport);
+	if (!nla)
+		return 0;
 	return (UINT32)nla_get_sspi_error(nla);
 }
 
