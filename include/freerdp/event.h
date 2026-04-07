@@ -126,6 +126,10 @@ extern "C"
 	UINT32 height;
 	DEFINE_EVENT_END(GraphicsReset)
 
+	DEFINE_EVENT_BEGIN(UserNotification)
+	const char* message;
+	DEFINE_EVENT_END(UserNotification)
+
 #ifdef __cplusplus
 }
 #endif

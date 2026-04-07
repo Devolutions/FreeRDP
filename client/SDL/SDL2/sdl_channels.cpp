@@ -81,3 +81,13 @@ void sdl_OnChannelDisconnectedEventHandler(void* context, const ChannelDisconnec
 	else
 		freerdp_client_OnChannelDisconnectedEventHandler(context, e);
 }
+
+void sdl_OnUserNotificationEventHandler(void* context, const UserNotificationEventArgs* e)
+{
+	WINPR_UNUSED(context);
+	WINPR_ASSERT(e);
+	WINPR_ASSERT(e->message);
+
+	const char* title = e->e.Sender ? e->e.Sender : "FreeRDP";
+	SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_INFORMATION, title, e->message, nullptr);
+}

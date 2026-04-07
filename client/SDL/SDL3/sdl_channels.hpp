@@ -21,6 +21,8 @@
 
 #include <freerdp/freerdp.h>
 #include <freerdp/client/channels.h>
+#include <freerdp/event.h>
 
 void sdl_OnChannelConnectedEventHandler(void* context, const ChannelConnectedEventArgs* e);
 void sdl_OnChannelDisconnectedEventHandler(void* context, const ChannelDisconnectedEventArgs* e);
+void sdl_OnUserNotificationEventHandler(void* context, const UserNotificationEventArgs* e);

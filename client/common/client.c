@@ -37,6 +37,7 @@
 #include <freerdp/utils/passphrase.h>
 #include <freerdp/client/cmdline.h>
 #include <freerdp/client/channels.h>
+#include <freerdp/event.h>
 #include <freerdp/utils/smartcardlogon.h>
 
 #if defined(CHANNEL_AINPUT_CLIENT)
@@ -89,6 +90,16 @@ static void set_default_callbacks(freerdp* instance)
 	instance->RetryDialog = client_common_retry_dialog;
 }
 
+static void client_cli_user_notification(void* context, const UserNotificationEventArgs* e)
+{
+	WINPR_UNUSED(context);
+	WINPR_ASSERT(e);
+	WINPR_ASSERT(e->message);
+
+	(void)fprintf(stderr, "%s\n", e->message);
+	(void)fflush(stderr);
+}
+
 static BOOL freerdp_client_common_new(freerdp* instance, rdpContext* context)
 {
 	RDP_CLIENT_ENTRY_POINTS* pEntryPoints = nullptr;
@@ -101,6 +112,10 @@ static BOOL freerdp_client_common_new(freerdp* instance, rdpContext* context)
 
 	pEntryPoints = instance->pClientEntryPoints;
 	WINPR_ASSERT(pEntryPoints);
+
+	if (context->pubSub)
+		PubSub_SubscribeUserNotification(context->pubSub, client_cli_user_notification);
+
 	return IFCALLRESULT(TRUE, pEntryPoints->ClientNew, instance, context);
 }
 

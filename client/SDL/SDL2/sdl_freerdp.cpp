@@ -611,6 +611,9 @@ static BOOL sdl_pre_connect(freerdp* instance)
 	if (PubSub_SubscribeChannelDisconnected(instance->context->pubSub,
 	                                        sdl_OnChannelDisconnectedEventHandler) < 0)
 		return FALSE;
+	if (PubSub_SubscribeUserNotification(instance->context->pubSub,
+	                                     sdl_OnUserNotificationEventHandler) < 0)
+		return FALSE;
 
 	if (!freerdp_settings_get_bool(settings, FreeRDP_AuthenticationOnly))
 	{
@@ -1174,6 +1177,8 @@ static void sdl_post_disconnect(freerdp* instance)
 	                                   sdl_OnChannelConnectedEventHandler);
 	PubSub_UnsubscribeChannelDisconnected(instance->context->pubSub,
 	                                      sdl_OnChannelDisconnectedEventHandler);
+	PubSub_UnsubscribeUserNotification(instance->context->pubSub,
+	                                   sdl_OnUserNotificationEventHandler);
 	gdi_free(instance);
 }
 
