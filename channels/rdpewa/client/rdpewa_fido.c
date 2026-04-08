@@ -54,6 +54,14 @@ typedef struct
 	int result;
 } RDPEWA_FIDO_ASYNC;
 
+static void zfree(char* str)
+{
+	if (str)
+		while (*str != '\0')
+			*str++ = '\0';
+	free(str);
+}
+
 static DWORD WINAPI rdpewa_fido_makecred_thread(LPVOID arg)
 {
 	RDPEWA_FIDO_ASYNC* a = (RDPEWA_FIDO_ASYNC*)arg;
@@ -95,7 +103,9 @@ static int rdpewa_fido_select_device(rdpContext* context, fido_dev_t** devs, siz
 		UserNotificationEventArgs e = WINPR_C_ARRAY_INIT;
 		EventArgsInit(&e, "FIDO2");
 		e.message = "Touch the security key to use.";
-		PubSub_OnUserNotification(context->pubSub, context, &e);
+		const int rc = PubSub_OnUserNotification(context->pubSub, context, &e);
+		if (rc < 0)
+			return rc;
 	}
 
 	/* Poll for touch with 200ms intervals */
@@ -249,7 +259,7 @@ static fido_dev_t* rdpewa_fido_open_device(RDPEWA_DEVICE_INFO* devInfo, int devI
  * per FIDO CTAP2 authenticatorMakeCredential (section 5.1).
  */
 static wStream* rdpewa_fido_make_credential(rdpContext* context, const BYTE* ctapData,
-                                            size_t ctapLen, UINT32 flags)
+                                            size_t ctapLen, WINPR_ATTR_UNUSED UINT32 flags)
 {
 	fido_dev_t* dev = nullptr;
 	RDPEWA_DEVICE_INFO devInfo = WINPR_C_ARRAY_INIT;
@@ -258,7 +268,7 @@ static wStream* rdpewa_fido_make_credential(rdpContext* context, const BYTE* cta
 
 	WINPR_ASSERT(ctapData);
 
-	struct cbor_load_result result;
+	struct cbor_load_result result = WINPR_C_ARRAY_INIT;
 	cbor_item_t* root = cbor_load(ctapData, ctapLen, &result);
 	if (!root || !cbor_isa_map(root))
 	{
@@ -563,14 +573,17 @@ static wStream* rdpewa_fido_make_credential(rdpContext* context, const BYTE* cta
 			UserNotificationEventArgs ne = WINPR_C_ARRAY_INIT;
 			EventArgsInit(&ne, "FIDO2");
 			ne.message = "Touch the security key, then press OK.";
-			PubSub_OnUserNotification(context->pubSub, context, &ne);
+			const int rc = PubSub_OnUserNotification(context->pubSub, context, &ne);
 			WaitForSingleObject(ft, INFINITE);
 			CloseHandle(ft);
+			if (rc < 0)
+			{
+				zfree(pin);
+				goto out;
+			}
 		}
 		r = fta.result;
-		if (pin)
-			memset(pin, 0, strlen(pin));
-		free(pin);
+		zfree(pin);
 	}
 
 	if (r != FIDO_OK)
@@ -621,7 +634,7 @@ static wStream* rdpewa_fido_make_credential(rdpContext* context, const BYTE* cta
 	if (rawAttStmt && rawAttStmtLen > 0)
 	{
 		/* The raw attstmt is already a CBOR-encoded map. Parse and re-attach it. */
-		struct cbor_load_result attResult;
+		struct cbor_load_result attResult = WINPR_C_ARRAY_INIT;
 		cbor_item_t* asKey = cbor_build_uint8(3);
 		cbor_item_t* asVal = cbor_load(rawAttStmt, rawAttStmtLen, &attResult);
 		if (!asVal || attResult.error.code != CBOR_ERR_NONE)
@@ -690,7 +703,7 @@ out:
  * Parse the inner CTAP CBOR request for GetAssertion (sub-command 0x02).
  */
 static wStream* rdpewa_fido_get_assertion(rdpContext* context, const BYTE* ctapData, size_t ctapLen,
-                                          UINT32 flags)
+                                          WINPR_ATTR_UNUSED UINT32 flags)
 {
 	fido_dev_t* dev = nullptr;
 	RDPEWA_DEVICE_INFO devInfo = WINPR_C_ARRAY_INIT;
@@ -699,7 +712,7 @@ static wStream* rdpewa_fido_get_assertion(rdpContext* context, const BYTE* ctapD
 
 	WINPR_ASSERT(ctapData);
 
-	struct cbor_load_result result;
+	struct cbor_load_result result = WINPR_C_ARRAY_INIT;
 	cbor_item_t* root = cbor_load(ctapData, ctapLen, &result);
 	if (!root || !cbor_isa_map(root))
 	{
@@ -892,14 +905,17 @@ static wStream* rdpewa_fido_get_assertion(rdpContext* context, const BYTE* ctapD
 			UserNotificationEventArgs ne = WINPR_C_ARRAY_INIT;
 			EventArgsInit(&ne, "FIDO2");
 			ne.message = "Touch the security key, then press OK.";
-			PubSub_OnUserNotification(context->pubSub, context, &ne);
+			const int rc = PubSub_OnUserNotification(context->pubSub, context, &ne);
 			WaitForSingleObject(ft, INFINITE);
 			CloseHandle(ft);
+			if (rc < 0)
+			{
+				zfree(pin);
+				goto out;
+			}
 		}
 		r = fta.result;
-		if (pin)
-			memset(pin, 0, strlen(pin));
-		free(pin);
+		zfree(pin);
 	}
 
 	if (r != FIDO_OK)

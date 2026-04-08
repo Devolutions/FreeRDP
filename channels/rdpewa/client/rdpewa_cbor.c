@@ -34,7 +34,7 @@
 
 BOOL rdpewa_cbor_decode_request(const BYTE* data, size_t length, RDPEWA_REQUEST* out)
 {
-	struct cbor_load_result result;
+	struct cbor_load_result result = WINPR_C_ARRAY_INIT;
 	BOOL ret = FALSE;
 
 	WINPR_ASSERT(data);
@@ -45,7 +45,7 @@ BOOL rdpewa_cbor_decode_request(const BYTE* data, size_t length, RDPEWA_REQUEST*
 	cbor_item_t* root = cbor_load(data, length, &result);
 	if (!root || result.error.code != CBOR_ERR_NONE)
 	{
-		WLog_ERR(TAG, "Failed to decode CBOR request, error %d at position %" PRIuz,
+		WLog_ERR(TAG, "Failed to decode CBOR request, error %u at position %" PRIuz,
 		         result.error.code, result.error.position);
 		goto out;
 	}
@@ -72,7 +72,8 @@ BOOL rdpewa_cbor_decode_request(const BYTE* data, size_t length, RDPEWA_REQUEST*
 		const char* keyStr = (const char*)cbor_string_handle(key);
 		const size_t keyLen = cbor_string_length(key);
 
-		WLog_DBG(TAG, "  key[%" PRIuz "]: \"%.*s\" type=%d", i, keyLen, keyStr, cbor_typeof(value));
+		WLog_DBG(TAG, "  key[%" PRIuz "]: \"%.*s\" type=%u", i,
+		         WINPR_ASSERTING_INT_CAST(int, keyLen), keyStr, cbor_typeof(value));
 
 		switch (keyLen)
 		{
@@ -172,6 +173,14 @@ out:
 	return ret;
 }
 
+static BOOL wrap_cbor_map_add(cbor_item_t* root, cbor_item_t* diKey, cbor_item_t* diMap)
+{
+	const bool rc = cbor_map_add(root, (struct cbor_pair){ .key = diKey, .value = diMap });
+	cbor_decref(&diKey);
+	cbor_decref(&diMap);
+	return rc;
+}
+
 wStream* rdpewa_cbor_encode_webauthn_response(HRESULT hresult, BYTE ctapStatus,
                                               const BYTE* ctapData, size_t ctapLen,
                                               const RDPEWA_DEVICE_INFO* devInfo)
@@ -186,7 +195,7 @@ wStream* rdpewa_cbor_encode_webauthn_response(HRESULT hresult, BYTE ctapStatus,
 	size_t responseLen = 1 + ctapLen;
 	BYTE* responseData = malloc(responseLen);
 	if (!responseData)
-		return FALSE;
+		return nullptr;
 
 	responseData[0] = ctapStatus;
 	if (ctapData && ctapLen > 0)
@@ -210,9 +219,11 @@ wStream* rdpewa_cbor_encode_webauthn_response(HRESULT hresult, BYTE ctapStatus,
 	{
 		/* The casing is all over the place, but that's how it's defined in the spec */
 		cbor_item_t* pairs[][2] = {
-			{ cbor_build_string("maxMsgSize"), cbor_build_uint16(devInfo->maxMsgSize) },
+			{ cbor_build_string("maxMsgSize"),
+			  cbor_build_uint16(WINPR_ASSERTING_INT_CAST(uint16_t, devInfo->maxMsgSize)) },
 			{ cbor_build_string("maxSerializedLargeBlobArray"),
-			  cbor_build_uint16(devInfo->maxSerializedLargeBlobArray) },
+			  cbor_build_uint16(
+			      WINPR_ASSERTING_INT_CAST(uint16_t, devInfo->maxSerializedLargeBlobArray)) },
 			{ cbor_build_string("providerType"), cbor_build_string(devInfo->providerType) },
 			{ cbor_build_string("providerName"), cbor_build_string(devInfo->providerName) },
 			{ cbor_build_string("devicePath"), cbor_build_string(devInfo->devicePath) },
@@ -222,32 +233,29 @@ wStream* rdpewa_cbor_encode_webauthn_response(HRESULT hresult, BYTE ctapStatus,
 			  cbor_build_bytestring(devInfo->aaGuid, sizeof(devInfo->aaGuid)) },
 			{ cbor_build_string("uvStatus"), cbor_build_uint8(devInfo->uvStatus) },
 			{ cbor_build_string("uvRetries"), cbor_build_uint8(devInfo->uvRetries) },
-			{ cbor_build_string("transports"), cbor_build_uint8(devInfo->transports) },
+			{ cbor_build_string("transports"),
+			  cbor_build_uint8(WINPR_ASSERTING_INT_CAST(uint8_t, devInfo->transports)) }
 		};
 		for (size_t i = 0; i < 11; i++)
 		{
-			cbor_map_add(diMap, (struct cbor_pair){ .key = pairs[i][0], .value = pairs[i][1] });
-			cbor_decref(&pairs[i][0]);
-			cbor_decref(&pairs[i][1]);
+			if (!wrap_cbor_map_add(diMap, pairs[i][0], pairs[i][1]))
+				goto out;
 		}
 	}
-	cbor_map_add(root, (struct cbor_pair){ .key = diKey, .value = diMap });
-	cbor_decref(&diKey);
-	cbor_decref(&diMap);
+	if (!wrap_cbor_map_add(root, diKey, diMap))
+		goto out;
 
 	/* "status" key (lowercase per spec example hex) */
 	cbor_item_t* statusKey = cbor_build_string("status");
 	cbor_item_t* statusVal = cbor_build_uint8(0);
-	cbor_map_add(root, (struct cbor_pair){ .key = statusKey, .value = statusVal });
-	cbor_decref(&statusKey);
-	cbor_decref(&statusVal);
+	if (!wrap_cbor_map_add(root, statusKey, statusVal))
+		goto out;
 
 	/* "response" key (lowercase per spec example hex) */
 	cbor_item_t* respKey = cbor_build_string("response");
 	cbor_item_t* respVal = cbor_build_bytestring(responseData, responseLen);
-	cbor_map_add(root, (struct cbor_pair){ .key = respKey, .value = respVal });
-	cbor_decref(&respKey);
-	cbor_decref(&respVal);
+	if (!wrap_cbor_map_add(root, respKey, respVal))
+		goto out;
 
 	cborLen = cbor_serialized_size(root);
 	if (cborLen == 0)
