@@ -127,7 +127,12 @@ extern "C"
 	DEFINE_EVENT_END(GraphicsReset)
 
 	DEFINE_EVENT_BEGIN(UserNotification)
-	const char* message;
+	UINT64 messageID;                /**< A unique message identifier, can be later used with \ref
+	                                    cancelPreviousNotification */
+	const char* message;             /**< An optional notification message text */
+	UINT32 timeoutMS;                /**< An optional message timeout, \b 0 for infinite */
+	BOOL cancelPreviousNotification; /**< This notification is meant to cancel a previous one with
+	                                    \ref messageID */
 	DEFINE_EVENT_END(UserNotification)
 
 #ifdef __cplusplus

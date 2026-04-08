@@ -94,9 +94,9 @@ static void client_cli_user_notification(void* context, const UserNotificationEv
 {
 	WINPR_UNUSED(context);
 	WINPR_ASSERT(e);
-	WINPR_ASSERT(e->message);
-
-	(void)fprintf(stderr, "%s\n", e->message);
+	if (!e->message || e->message[0] == '\0')
+		return;
+	(void)fprintf(stderr, "[%s] Touch the security key\n", e->e.Sender);
 	(void)fflush(stderr);
 }
 

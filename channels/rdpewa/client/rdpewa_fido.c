@@ -16,6 +16,8 @@
  * limitations under the License.
  */
 
+#include <winpr/sysinfo.h>
+
 #include <freerdp/config.h>
 
 #include <string.h>
@@ -57,10 +59,11 @@ typedef struct
 
 static void zfree(char* str)
 {
+	char* orig = str;
 	if (str)
 		while (*str != '\0')
 			*str++ = '\0';
-	free(str);
+	free(orig);
 }
 
 static DWORD WINAPI rdpewa_fido_makecred_thread(LPVOID arg)
@@ -77,6 +80,40 @@ static DWORD WINAPI rdpewa_fido_getassert_thread(LPVOID arg)
 	return 0;
 }
 
+static bool notify(rdpContext* context, UINT64 id, bool cancel)
+{
+	/* Fire-and-forget notification to the UI via PubSub */
+	UserNotificationEventArgs e = WINPR_C_ARRAY_INIT;
+	EventArgsInit(&e, RDPEWA_CHANNEL_NAME);
+	if (!cancel)
+	{
+		e.timeoutMS = 30000;
+		e.message = "Touch the security key";
+	}
+	e.cancelPreviousNotification = cancel;
+
+	e.messageID = id;
+	const int rc = PubSub_OnUserNotification(context->pubSub, context, &e);
+	return (rc >= 0);
+}
+
+static bool notifyWait(rdpContext* context, HANDLE ft, fido_dev_t* dev)
+{
+	if (!ft)
+		return false;
+
+	HANDLE hdl[] = { ft, freerdp_abort_event(context) };
+	const UINT64 id = winpr_GetTickCount64NS();
+	(void)notify(context, id, false);
+	const DWORD status = WaitForMultipleObjects(ARRAYSIZE(hdl), hdl, FALSE, INFINITE);
+	CloseHandle(ft);
+	(void)notify(context, id, true);
+
+	const bool rc = (status == WAIT_OBJECT_0);
+	if (!rc)
+		fido_dev_cancel(dev);
+	return rc;
+}
 /**
  * Select a device by making all available keys blink and waiting for the user to touch one.
  * Uses fido_dev_get_touch_begin/fido_dev_get_touch_status for non-blocking multi-device selection.
@@ -99,15 +136,8 @@ static int rdpewa_fido_select_device(rdpContext* context, fido_dev_t** devs, siz
 		}
 	}
 
-	{
-		/* Fire-and-forget notification to the UI via PubSub */
-		UserNotificationEventArgs e = WINPR_C_ARRAY_INIT;
-		EventArgsInit(&e, "FIDO2");
-		e.message = "Touch the security key to use.";
-		const int rc = PubSub_OnUserNotification(context->pubSub, context, &e);
-		if (rc < 0)
-			return rc;
-	}
+	const UINT64 id = winpr_GetTickCount64NS();
+	(void)notify(context, id, false);
 
 	/* Poll for touch with 200ms intervals */
 	int selected = -1;
@@ -130,6 +160,7 @@ static int rdpewa_fido_select_device(rdpContext* context, fido_dev_t** devs, siz
 		}
 	}
 
+	(void)notify(context, id, true);
 	return selected;
 }
 
@@ -259,6 +290,7 @@ static fido_dev_t* rdpewa_fido_open_device(RDPEWA_DEVICE_INFO* devInfo, int devI
  * The request byte string has: first byte = 0x01, followed by a CBOR map with integer keys
  * per FIDO CTAP2 authenticatorMakeCredential (section 5.1).
  */
+WINPR_ATTR_MALLOC(Stream_Free, 1)
 static wStream* rdpewa_fido_make_credential(rdpContext* context, const BYTE* ctapData,
                                             size_t ctapLen, WINPR_ATTR_UNUSED UINT32 flags)
 {
@@ -556,7 +588,7 @@ static wStream* rdpewa_fido_make_credential(rdpContext* context, const BYTE* cta
 			    !instance->AuthenticateEx(instance, &u, &p, &d, AUTH_FIDO_PIN) || !p)
 			{
 				free(u);
-				free(p);
+				zfree(p);
 				free(d);
 				ret = rdpewa_cbor_encode_webauthn_response(E_FAIL, 0x01, nullptr, 0, &devInfo);
 				goto out;
@@ -569,20 +601,12 @@ static wStream* rdpewa_fido_make_credential(rdpContext* context, const BYTE* cta
 		/* Run fido in background (key starts blinking), notify via PubSub */
 		RDPEWA_FIDO_ASYNC fta = { dev, cred, nullptr, pin, FIDO_ERR_INTERNAL };
 		HANDLE ft = CreateThread(nullptr, 0, rdpewa_fido_makecred_thread, &fta, 0, nullptr);
-		if (ft)
+		if (!notifyWait(context, ft, dev))
 		{
-			UserNotificationEventArgs ne = WINPR_C_ARRAY_INIT;
-			EventArgsInit(&ne, "FIDO2");
-			ne.message = "Touch the security key, then press OK.";
-			const int rc = PubSub_OnUserNotification(context->pubSub, context, &ne);
-			WaitForSingleObject(ft, INFINITE);
-			CloseHandle(ft);
-			if (rc < 0)
-			{
-				zfree(pin);
-				goto out;
-			}
+			zfree(pin);
+			goto out;
 		}
+
 		r = fta.result;
 		zfree(pin);
 	}
@@ -703,6 +727,7 @@ out:
 /**
  * Parse the inner CTAP CBOR request for GetAssertion (sub-command 0x02).
  */
+WINPR_ATTR_MALLOC(Stream_Free, 1)
 static wStream* rdpewa_fido_get_assertion(rdpContext* context, const BYTE* ctapData, size_t ctapLen,
                                           WINPR_ATTR_UNUSED UINT32 flags)
 {
@@ -888,7 +913,7 @@ static wStream* rdpewa_fido_get_assertion(rdpContext* context, const BYTE* ctapD
 			    !instance->AuthenticateEx(instance, &u, &p, &d, AUTH_FIDO_PIN) || !p)
 			{
 				free(u);
-				free(p);
+				zfree(p);
 				free(d);
 				ret = rdpewa_cbor_encode_webauthn_response(E_FAIL, 0x01, nullptr, 0, &devInfo);
 				goto out;
@@ -901,20 +926,12 @@ static wStream* rdpewa_fido_get_assertion(rdpContext* context, const BYTE* ctapD
 		/* Run fido in background (key starts blinking), show prompt on this thread */
 		RDPEWA_FIDO_ASYNC fta = { dev, nullptr, assert, pin, FIDO_ERR_INTERNAL };
 		HANDLE ft = CreateThread(nullptr, 0, rdpewa_fido_getassert_thread, &fta, 0, nullptr);
-		if (ft)
+		if (!notifyWait(context, ft, dev))
 		{
-			UserNotificationEventArgs ne = WINPR_C_ARRAY_INIT;
-			EventArgsInit(&ne, "FIDO2");
-			ne.message = "Touch the security key, then press OK.";
-			const int rc = PubSub_OnUserNotification(context->pubSub, context, &ne);
-			WaitForSingleObject(ft, INFINITE);
-			CloseHandle(ft);
-			if (rc < 0)
-			{
-				zfree(pin);
-				goto out;
-			}
+			zfree(pin);
+			goto out;
 		}
+
 		r = fta.result;
 		zfree(pin);
 	}

@@ -96,8 +96,14 @@ void sdl_OnUserNotificationEventHandler(void* context, const UserNotificationEve
 {
 	WINPR_UNUSED(context);
 	WINPR_ASSERT(e);
-	WINPR_ASSERT(e->message);
+	WINPR_ASSERT(e->e.Sender);
 
-	const char* title = e->e.Sender ? e->e.Sender : "FreeRDP";
-	SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_INFORMATION, title, e->message, nullptr);
+	if (e->cancelPreviousNotification)
+		return;
+
+	WINPR_ASSERT(e->message);
+	auto parent = SDL_GetMouseFocus();
+	if (!parent)
+		parent = SDL_GetKeyboardFocus();
+	SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_INFORMATION, e->e.Sender, e->message, parent);
 }
