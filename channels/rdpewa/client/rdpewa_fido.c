@@ -35,6 +35,7 @@
 
 #include "rdpewa_cbor.h"
 #include "rdpewa_fido.h"
+#include <rdpewa-common.h>
 
 #include <winpr/thread.h>
 #include <winpr/synch.h>

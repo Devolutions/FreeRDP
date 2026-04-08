@@ -13,13 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-find_package(libcbor)
-find_package(libfido2)
+find_package(libcbor REQUIRED)
+find_package(libfido2 REQUIRED)
 
-if(libcbor_FOUND AND libfido2_FOUND)
-  define_channel("rdpewa")
+define_channel("rdpewa")
 
-  if(WITH_CLIENT_CHANNELS)
-    add_channel_client(${MODULE_PREFIX} ${CHANNEL_NAME})
-  endif()
+include_directories(common)
+
+if(WITH_CLIENT_CHANNELS)
+  add_channel_client(${MODULE_PREFIX} ${CHANNEL_NAME})
 endif()

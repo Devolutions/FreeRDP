@@ -32,6 +32,7 @@
 #include "rdpewa_main.h"
 #include "rdpewa_cbor.h"
 #include "rdpewa_fido.h"
+#include <rdpewa-common.h>
 
 #include <freerdp/client/channels.h>
 #include <freerdp/channels/log.h>
@@ -54,7 +55,7 @@ static DWORD WINAPI rdpewa_async_webauthn_thread(LPVOID arg)
 
 	switch (work->request.command)
 	{
-		case CYCAPCBOR_RPC_COMMAND_WEB_AUTHN:
+		case CTAPCBOR_RPC_COMMAND_WEB_AUTHN:
 			s = rdpewa_fido_webauthn(work->rdpContext, &work->request);
 			break;
 		default:
@@ -122,7 +123,7 @@ static UINT rdpewa_on_data_received(IWTSVirtualChannelCallback* pChannelCallback
 
 	switch (request.command)
 	{
-		case CYCAPCBOR_RPC_COMMAND_WEB_AUTHN:
+		case CTAPCBOR_RPC_COMMAND_WEB_AUTHN:
 		{
 			/* Run FIDO operations on a worker thread to avoid blocking
 			 * the DVC callback thread (which would freeze RDP rendering). */
