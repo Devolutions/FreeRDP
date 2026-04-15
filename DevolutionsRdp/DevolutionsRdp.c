@@ -209,6 +209,15 @@ static void cs_send_unicode_key_ex(freerdp* instance, UINT16 flags, UINT16 code)
 	freerdp_input_send_unicode_keyboard_event(instance->context->input, flags, code);
 }
 
+static void cs_OnUserNotificationEventHandler(void* context, const UserNotificationEventArgs* e)
+{
+	rdpContext* rdpCtx = (rdpContext*)context;
+	csContext* csc = (csContext*)rdpCtx->instance->context;
+
+	if (csc->onUserNotification && e->message)
+		csc->onUserNotification(context, e->message);
+}
+
 void cs_OnChannelConnectedEventHandler(rdpContext* context, ChannelConnectedEventArgs* e)
 {
 	csContext* csc = (csContext*)context->instance->context;
@@ -351,6 +360,9 @@ static BOOL cs_pre_connect(freerdp* instance)
 	PubSub_SubscribeChannelDisconnected(context->pubSub,
 										(pChannelDisconnectedEventHandler) cs_OnChannelDisconnectedEventHandler);
 
+	PubSub_SubscribeUserNotification(context->pubSub,
+									 (pUserNotificationEventHandler) cs_OnUserNotificationEventHandler);
+
 	if (csc && csc->onPreConnect)
 	{
 		return csc->onPreConnect(instance) != 0;
@@ -491,12 +503,19 @@ static BOOL cs_do_authenticate(freerdp* instance, char** username, char** passwo
 {
 	csContext* context = (csContext*)instance->context;
 	uint32_t result = 1;
-	fnOnAuthenticate callback = context->onAuthenticate;
+	fnOnAuthenticate callback;
 
-	if (reason > AUTH_RDP)
+	switch (reason)
 	{
-		callback = context->onGwAuthenticate;
-		result = 0;
+		case GW_AUTH_HTTP:
+		case GW_AUTH_RDG:
+		case GW_AUTH_RPC:
+			callback = context->onGwAuthenticate;
+			result = 0;
+			break;
+		default:
+			callback = context->onAuthenticate;
+			break;
 	}
 
 	if (!callback)
@@ -536,10 +555,12 @@ static BOOL cs_do_authenticate(freerdp* instance, char** username, char** passwo
 
 		free(*password);
 		*password = _strdup(pszPassword);
-			
+
 		free(*domain);
 		*domain = _strdup(pszDomain);
 	}
+
+	SecureZeroMemory(pszPassword, sizeof(pszPassword));
 
 out:
 	return result != 0;
@@ -1558,8 +1579,16 @@ void csharp_set_on_gateway_authenticate(void* instance, fnOnAuthenticate fn)
 {
 	freerdp* inst = (freerdp*)instance;
 	csContext* ctxt = (csContext*)inst->context;
-	
+
 	ctxt->onGwAuthenticate = fn;
+}
+
+void csharp_set_on_user_notification(void* instance, fnOnUserNotification fn)
+{
+	freerdp* inst = (freerdp*)instance;
+	csContext* ctxt = (csContext*)inst->context;
+
+	ctxt->onUserNotification = fn;
 }
 
 void csharp_set_on_verify_certificate(void* instance, pVerifyCertificateEx fn)
