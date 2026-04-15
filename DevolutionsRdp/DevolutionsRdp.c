@@ -214,8 +214,9 @@ static void cs_OnUserNotificationEventHandler(void* context, const UserNotificat
 	rdpContext* rdpCtx = (rdpContext*)context;
 	csContext* csc = (csContext*)rdpCtx->instance->context;
 
-	if (csc->onUserNotification && e->message)
-		csc->onUserNotification(context, e->message);
+	if (csc->onUserNotification)
+		csc->onUserNotification(context, e->messageID, e->cancelPreviousNotification, e->message,
+		                        e->timeoutMS);
 }
 
 void cs_OnChannelConnectedEventHandler(rdpContext* context, ChannelConnectedEventArgs* e)
