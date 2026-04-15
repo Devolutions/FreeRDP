@@ -19,6 +19,16 @@ set(${MODULE_PREFIX}_SRCS rdpewa_main.c rdpewa_main.h rdpewa_cbor.c rdpewa_cbor.
 
 set(${MODULE_PREFIX}_LIBS winpr freerdp ${LIBCBOR_LIBRARIES} ${LIBFIDO2_LIBRARIES})
 
+if(APPLE)
+	find_library(IOKIT_LIBRARY IOKit REQUIRED)
+	find_library(COREFOUNDATION_LIBRARY CoreFoundation REQUIRED)
+	list(APPEND ${MODULE_PREFIX}_LIBS ${IOKIT_LIBRARY} ${COREFOUNDATION_LIBRARY})
+endif()
+
+if(WIN32)
+	list(APPEND ${MODULE_PREFIX}_LIBS setupapi hid)
+endif()
+
 include_directories(..)
 include_directories(${LIBCBOR_INCLUDE_DIRS})
 include_directories(${LIBFIDO2_INCLUDE_DIRS})

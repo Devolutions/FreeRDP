@@ -52,6 +52,11 @@ extern "C"
 	extern unsigned int v4l_freerdp_rdpecam_client_subsystem_entry(void* pEntryPoints);
 #endif
 
+#if defined(CHANNEL_RDPEWA_CLIENT)
+	/* rdpewa channel entry point - needs explicit reference */
+	extern unsigned int rdpewa_DVCPluginEntry(void* pEntryPoints);
+#endif
+
 #ifdef __cplusplus
 }
 #endif
@@ -68,6 +73,9 @@ volatile const void* devolutions_rdp_static_channel_symbols[] = {
 	/* Reference the actual entry points */
 	(const void*)rdpecam_DVCPluginEntry,
 	(const void*)v4l_freerdp_rdpecam_client_subsystem_entry,
+#endif
+#if defined(CHANNEL_RDPEWA_CLIENT)
+	(const void*)rdpewa_DVCPluginEntry,
 #endif
 	NULL
 };
