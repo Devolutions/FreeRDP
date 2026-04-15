@@ -21,11 +21,13 @@ typedef void (*fnOnNewCursor)(void* context, void* pointer, BYTE* data, UINT32 x
 typedef BYTE* (*fnOnFreeCursor)(void* context, void* pointer);
 typedef void (*fnOnSetCursor)(void* context, void* pointer);
 typedef void (*fnOnDefaultCursor)(void* context);
-typedef uint32_t (*fnOnAuthenticate)(void* context, 
-	char* pszUsername, int cchUsername, 
-	char* pszPassword, int cchPassword, 
+typedef uint32_t (*fnOnAuthenticate)(void* context,
+	char* pszUsername, int cchUsername,
+	char* pszPassword, int cchPassword,
 	char* pszDoman, int cchDomain,
 	rdp_auth_reason reason);
+
+typedef void (*fnOnUserNotification)(void* context, const char* message);
 
 typedef struct csharp_context
 {
@@ -47,6 +49,7 @@ typedef struct csharp_context
 	fnLogonErrorInfo onLogonErrorInfo;
 	fnOnAuthenticate onAuthenticate;
 	fnOnAuthenticate onGwAuthenticate;
+	fnOnUserNotification onUserNotification;
 	fnOnChannelReceivedData onChannelReceivedData;
 
 	/* Legacy clipboard */
@@ -89,6 +92,7 @@ FREERDP_API void csharp_freerdp_set_on_desktop_size_changed(void* instance, fnDe
 FREERDP_API BOOL csharp_freerdp_set_client_hostname(void* instance, const char* clientHostname);
 FREERDP_API void csharp_freerdp_set_console_mode(void* instance, BOOL useConsoleMode, BOOL useRestrictedAdminMode);
 FREERDP_API void csharp_freerdp_set_redirect_clipboard(void* instance, BOOL redirectClipboard);
+FREERDP_API void csharp_set_on_user_notification(void* instance, fnOnUserNotification fn);
 FREERDP_API uint32_t csharp_freerdp_set_desktop_width(void* instance, uint32_t desktopWidth);
 FREERDP_API uint32_t csharp_freerdp_set_desktop_height(void* instance, uint32_t desktopHeight);
 FREERDP_API BOOL csharp_freerdp_set_connection_info(void* instance, const char* hostname,
