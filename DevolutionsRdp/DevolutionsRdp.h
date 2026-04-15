@@ -27,7 +27,8 @@ typedef uint32_t (*fnOnAuthenticate)(void* context,
 	char* pszDoman, int cchDomain,
 	rdp_auth_reason reason);
 
-typedef void (*fnOnUserNotification)(void* context, const char* message);
+typedef void (*fnOnUserNotification)(void* context, UINT64 messageId, UINT32 cancel, const char* message,
+                                     UINT32 timeoutMs);
 
 typedef struct csharp_context
 {
