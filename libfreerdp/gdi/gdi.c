@@ -516,7 +516,12 @@ BOOL gdi_bitmap_update(rdpContext* context, const BITMAP_UPDATE* bitmapUpdate)
 		if (!bmp->Decompress(context, bmp, bitmap->bitmapDataStream, bitmap->width, bitmap->height,
 		                     bitmap->bitsPerPixel, bitmap->bitmapLength, bitmap->compressed,
 		                     RDP_CODEC_ID_NONE))
-			goto fail;
+		{
+			WLog_WARN(TAG, "Skipping malformed bitmap tile [%u/%u]: decompression failed",
+			          index + 1, bitmapUpdate->number);
+			Bitmap_Free(context, bmp);
+			continue;
+		}
 
 		if (!bmp->New(context, bmp))
 			goto fail;
