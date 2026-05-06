@@ -302,7 +302,15 @@ static void rdpsnd_mac_start(rdpsndDevicePlugin *device)
 
 		if (!mac->isPlaying)
 		{
-			[mac->player play];
+			@try
+			{
+				[mac->player play];
+			}
+			@catch (NSException *e)
+			{
+				WLog_WARN(TAG, "AVAudioPlayerNode play failed: %s", [e.reason UTF8String]);
+				return;
+			}
 
 			mac->isPlaying = TRUE;
 			mac->diff = 100; /* Initial latency, corrected after first sample is played. */
