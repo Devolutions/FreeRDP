@@ -184,6 +184,19 @@ static BOOL WLog_FileAppender_Set(wLogAppender* appender, const char* setting, v
 	if (!strcmp("outputfilepath", setting))
 		return WLog_FileAppender_SetOutputFilePath(fileAppender, (const char*)value);
 
+	if (!strcmp("rotate", setting))
+	{
+		if (!fileAppender->FileDescriptor)
+			return FALSE;
+		(void)fflush(fileAppender->FileDescriptor);
+#ifdef _WIN32
+		(void)_chsize(fileno(fileAppender->FileDescriptor), 0);
+#else
+		(void)ftruncate(fileno(fileAppender->FileDescriptor), 0);
+#endif
+		return TRUE;
+	}
+
 	return FALSE;
 }
 
