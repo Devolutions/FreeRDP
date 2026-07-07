@@ -361,10 +361,14 @@ static int mediacodec_decompress(H264_CONTEXT* h264, const BYTE* pSrcData, UINT3
 				pYUVData[2] = outputBuffer + iStride[0] * sys->outputHeight +
 				              iStride[1] * ((sys->outputHeight + 1) / 2);
 
-				if (sys->outputWidth < h264->width)
-					goto fail;
-				if (sys->outputHeigth < h264->height)
-					goto fail;
+				if (sys->outputWidth < h264->width || sys->outputHeight < h264->height)
+				{
+					WLog_Print(h264->log, WLOG_ERROR,
+					           "MediaCodec output size %" PRId32 "x%" PRId32
+					           " smaller than requested %" PRIu32 "x%" PRIu32,
+					           sys->outputWidth, sys->outputHeight, h264->width, h264->height);
+					return -1;
+				}
 				break;
 			}
 			else if (outputBufferId == AMEDIACODEC_INFO_OUTPUT_FORMAT_CHANGED)
