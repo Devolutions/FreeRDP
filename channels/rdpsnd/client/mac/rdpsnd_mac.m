@@ -134,6 +134,20 @@ static void rdpsnd_mac_release(rdpsndMacPlugin *mac)
 	mac->engine = nullptr;
 }
 
+static BOOL rdpsnd_mac_connect_player(rdpsndMacPlugin *mac)
+{
+	@try
+	{
+		[mac->engine connect:mac->player to:mac->engine.mainMixerNode format:nil];
+		return TRUE;
+	}
+	@catch (NSException *e)
+	{
+		WLog_WARN(TAG, "AVAudioEngine connect failed: %s", [e.reason UTF8String]);
+		return FALSE;
+	}
+}
+
 static BOOL rdpsnd_mac_open(rdpsndDevicePlugin *device, const AUDIO_FORMAT *format, UINT32 latency)
 {
 	@autoreleasepool
@@ -192,7 +206,11 @@ static BOOL rdpsnd_mac_open(rdpsndDevicePlugin *device, const AUDIO_FORMAT *form
 
 		[mac->engine attachNode:mac->player];
 
-		[mac->engine connect:mac->player to:mac->engine.mainMixerNode format:nil];
+		if (!rdpsnd_mac_connect_player(mac))
+		{
+			rdpsnd_mac_release(mac);
+			return FALSE;
+		}
 
 		[mac->engine prepare];
 
@@ -288,7 +306,11 @@ static void rdpsnd_mac_start(rdpsndDevicePlugin *device)
 		if (!mac->engine.isRunning)
 		{
 			NSError *error;
-			[mac->engine connect:mac->player to:mac->engine.mainMixerNode format:nil];
+			if (!rdpsnd_mac_connect_player(mac))
+			{
+				device->Close(device);
+				return;
+			}
 			[mac->engine prepare];
 			if (![mac->engine startAndReturnError:&error])
 			{
@@ -372,14 +394,22 @@ static UINT rdpsnd_mac_play(rdpsndDevicePlugin *device, const BYTE *data, size_t
 
 		rdpsnd_mac_start(device);
 
-		[mac->player scheduleBuffer:buffer
-		          completionHandler:^{
-			          UINT64 stop = GetTickCount64();
-			          if (start > stop)
-				          mac->diff = 0;
-			          else
-				          mac->diff = stop - start;
-		          }];
+		@try
+		{
+			[mac->player scheduleBuffer:buffer
+			          completionHandler:^{
+				          UINT64 stop = GetTickCount64();
+				          if (start > stop)
+					          mac->diff = 0;
+				          else
+					          mac->diff = stop - start;
+			          }];
+		}
+		@catch (NSException *e)
+		{
+			WLog_WARN(TAG, "AVAudioPlayerNode scheduleBuffer failed: %s",
+			          [e.reason UTF8String]);
+		}
 
 		[buffer release];
 
