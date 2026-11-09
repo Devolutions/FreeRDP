@@ -19,6 +19,7 @@ typedef struct
 	IWTSListenerCallback listenerCallback;
 	IWTSListener* listener;
 	IWTSVirtualChannelManager* manager;
+	DrdynvcDispatcher* dispatcher;
 	NowProtoClientContext context;
 	CRITICAL_SECTION lock;
 	NowProtoClientCallbacksV2 callbacks;
@@ -32,7 +33,9 @@ struct s_nowproto_channel
 	NowProtoEndpoint endpoint;
 	volatile LONG refs;
 	NOWPROTO_PLUGIN* plugin;
-	DrdynvcChannelHandle* transport;
+	DrdynvcDispatcher* dispatcher;
+	IWTSVirtualChannel* transport; /* Only the DVC worker touches this in V2. */
+	volatile LONG closed;
 	NowProtoClientCallbacksV2 callbacks;
 	BOOL offered;
 };
@@ -52,29 +55,86 @@ static void nowproto_release(NowProtoEndpoint* endpoint)
 	NOWPROTO_CHANNEL* channel = nowproto_channel(endpoint);
 	if (InterlockedDecrement(&channel->refs) == 0)
 	{
-		freerdp_drdynvc_channel_handle_release(channel->transport);
+		freerdp_drdynvc_dispatcher_release(channel->dispatcher);
 		free(channel);
 	}
 }
 
-static UINT nowproto_endpoint_write(NowProtoEndpoint* endpoint, const BYTE* data, UINT32 size)
+typedef struct
 {
-	if (!data || !size)
+	NOWPROTO_CHANNEL* channel;
+	void* token;
+	UINT32 size;
+	BOOL close;
+	BYTE data[];
+} NOWPROTO_COMMAND;
+
+static UINT nowproto_command_run(void* payload)
+{
+	NOWPROTO_COMMAND* command = payload;
+	IWTSVirtualChannel* transport = command->channel->transport;
+	if (!transport)
+		return command->close ? CHANNEL_RC_OK : ERROR_NOT_CONNECTED;
+	if (command->close)
+		return transport->Close(transport);
+	return transport->Write(transport, command->size, command->data, nullptr);
+}
+
+static void nowproto_command_complete(void* payload, UINT status)
+{
+	NOWPROTO_COMMAND* command = payload;
+	NOWPROTO_CHANNEL* channel = command->channel;
+	channel->callbacks.OperationCompleted(channel->callbacks.custom, &channel->endpoint,
+	                                      command->token, status);
+	nowproto_release(&channel->endpoint);
+	free(command);
+}
+
+static UINT nowproto_submit(NowProtoEndpoint* endpoint, const BYTE* data, UINT32 size, void* token,
+                            BOOL* queued, BOOL close)
+{
+	if (!queued)
+		return ERROR_INVALID_PARAMETER;
+	*queued = FALSE;
+	if (!close && (!data || !size))
 		return ERROR_INVALID_PARAMETER;
 	NOWPROTO_CHANNEL* channel = nowproto_channel(endpoint);
+	if (InterlockedCompareExchange(&channel->closed, 0, 0))
+		return close ? CHANNEL_RC_OK : ERROR_NOT_CONNECTED;
+	const size_t allocation = sizeof(NOWPROTO_COMMAND) + (size_t)size;
+	if (allocation < (size_t)size)
+		return ERROR_INVALID_PARAMETER;
+	NOWPROTO_COMMAND* command = malloc(allocation);
+	if (!command)
+		return ERROR_NOT_ENOUGH_MEMORY;
+	command->channel = channel;
+	command->token = token;
+	command->size = size;
+	command->close = close;
+	if (size)
+		CopyMemory(command->data, data, size);
 	nowproto_retain(endpoint);
-	const UINT status = freerdp_drdynvc_channel_handle_write(channel->transport, data, size);
-	nowproto_release(endpoint);
+	const UINT status = freerdp_drdynvc_dispatcher_post(channel->dispatcher, nowproto_command_run,
+	                                                    nowproto_command_complete, command);
+	if (status == CHANNEL_RC_OK)
+		*queued = TRUE;
+	else
+	{
+		nowproto_release(endpoint);
+		free(command);
+	}
 	return status;
 }
 
-static UINT nowproto_endpoint_close(NowProtoEndpoint* endpoint)
+static UINT nowproto_endpoint_write(NowProtoEndpoint* endpoint, const BYTE* data, UINT32 size,
+                                    void* token, BOOL* queued)
 {
-	NOWPROTO_CHANNEL* channel = nowproto_channel(endpoint);
-	nowproto_retain(endpoint);
-	const UINT status = freerdp_drdynvc_channel_handle_close(channel->transport);
-	nowproto_release(endpoint);
-	return status;
+	return nowproto_submit(endpoint, data, size, token, queued, FALSE);
+}
+
+static UINT nowproto_endpoint_close(NowProtoEndpoint* endpoint, void* token, BOOL* queued)
+{
+	return nowproto_submit(endpoint, nullptr, 0, token, queued, TRUE);
 }
 
 static UINT nowproto_write(NowProtoClientContext* context, void* data, int size)
@@ -94,8 +154,9 @@ static UINT nowproto_write(NowProtoClientContext* context, void* data, int size)
 		return ERROR_INVALID_STATE;
 	if (!channel)
 		return ERROR_NOT_CONNECTED;
-	const UINT status =
-	    freerdp_drdynvc_channel_handle_write(channel->transport, data, (UINT32)size);
+	/* Legacy ABI retains its historical synchronous/raw-channel semantics.
+	 * Only V2 submissions have the worker-dispatch lifetime contract. */
+	const UINT status = channel->transport->Write(channel->transport, (UINT32)size, data, nullptr);
 	nowproto_release(&channel->endpoint);
 	return status;
 }
@@ -105,10 +166,12 @@ UINT freerdp_nowproto_client_set_callbacks(NowProtoClientContext* context,
 {
 	if (!context || !callbacks || (callbacks->size != sizeof(*callbacks)) ||
 	    (callbacks->version != NOWPROTO_CLIENT_CALLBACKS_VERSION_2) || !callbacks->Offer ||
-	    !callbacks->Receive || !callbacks->Closed)
+	    !callbacks->Receive || !callbacks->Closed || !callbacks->OperationCompleted)
 		return ERROR_INVALID_PARAMETER;
 
 	NOWPROTO_PLUGIN* plugin = context->handle;
+	if (!plugin->dispatcher)
+		return ERROR_NOT_SUPPORTED;
 	EnterCriticalSection(&plugin->lock);
 	UINT status = ERROR_INVALID_STATE;
 	if (!plugin->opened && !plugin->callbacks.version)
@@ -159,6 +222,8 @@ static UINT nowproto_on_close(IWTSVirtualChannelCallback* callback)
 {
 	NOWPROTO_CHANNEL* channel = (NOWPROTO_CHANNEL*)callback;
 	NOWPROTO_PLUGIN* plugin = channel->plugin;
+	channel->transport = nullptr;
+	(void)InterlockedCompareExchange(&channel->closed, 1, 0);
 	EnterCriticalSection(&plugin->lock);
 	if (plugin->current == channel)
 		plugin->current = nullptr;
@@ -186,19 +251,17 @@ static UINT nowproto_on_new_channel(IWTSListenerCallback* callback, IWTSVirtualC
 	NOWPROTO_CHANNEL* channel = calloc(1, sizeof(*channel));
 	if (!channel)
 		return CHANNEL_RC_NO_MEMORY;
-	channel->transport = freerdp_drdynvc_channel_handle_new(transport);
-	if (!channel->transport)
-	{
-		free(channel);
-		return CHANNEL_RC_NO_MEMORY;
-	}
+	channel->transport = transport;
+	channel->dispatcher = plugin->dispatcher;
+	if (channel->dispatcher)
+		freerdp_drdynvc_dispatcher_retain(channel->dispatcher);
 	channel->iface.OnDataReceived = nowproto_on_data_received;
 	channel->iface.OnOpen = nowproto_on_open;
 	channel->iface.OnClose = nowproto_on_close;
 	channel->endpoint.Retain = nowproto_retain;
 	channel->endpoint.Release = nowproto_release;
-	channel->endpoint.Write = nowproto_endpoint_write;
-	channel->endpoint.Close = nowproto_endpoint_close;
+	channel->endpoint.SubmitWrite = nowproto_endpoint_write;
+	channel->endpoint.RequestClose = nowproto_endpoint_close;
 	channel->refs = 1;
 	channel->plugin = plugin;
 
@@ -215,6 +278,9 @@ static UINT nowproto_initialize(IWTSPlugin* iface, IWTSVirtualChannelManager* ma
 	NOWPROTO_PLUGIN* plugin = (NOWPROTO_PLUGIN*)iface;
 	if (!manager || plugin->manager)
 		return ERROR_INVALID_STATE;
+	const UINT acquired = freerdp_drdynvc_dispatcher_acquire(manager, &plugin->dispatcher);
+	if ((acquired != CHANNEL_RC_OK) && (acquired != ERROR_NOT_SUPPORTED))
+		return acquired;
 	IWTSListener* listener = nullptr;
 	const UINT status = manager->CreateListener(manager, NOWPROTO_DVC_CHANNEL_NAME, 0,
 	                                            &plugin->listenerCallback, &listener);
@@ -230,14 +296,14 @@ static UINT nowproto_initialize(IWTSPlugin* iface, IWTSVirtualChannelManager* ma
 static UINT nowproto_terminated(IWTSPlugin* iface)
 {
 	NOWPROTO_PLUGIN* plugin = (NOWPROTO_PLUGIN*)iface;
-	/* drdynvc closes all channels before terminating plugins. Retained endpoints
-	 * have inert transport handles and never dereference this plugin again. */
+	/* Worker commands and channel callbacks have finished before Terminated. */
 	if (plugin->listener)
 	{
 		const UINT status = plugin->manager->DestroyListener(plugin->manager, plugin->listener);
 		if (status != CHANNEL_RC_OK)
 			WLog_ERR(TAG, "DestroyListener failed: %" PRIu32, status);
 	}
+	freerdp_drdynvc_dispatcher_release(plugin->dispatcher);
 	DeleteCriticalSection(&plugin->lock);
 	free(plugin);
 	return CHANNEL_RC_OK;

@@ -31,23 +31,29 @@ extern "C"
 	 * One immutable offer identity. Retain before handing to asynchronous work,
 	 * Release when finished. Each operation requires an owned reference; it is
 	 * safe to Release a consumer reference from a reentrant callback.
-	 * Write requires nonempty data and copies/submits bytes before returning.
-	 * Close is locally idempotent; it does not wait for a remote acknowledgement.
+	 * SubmitWrite copies nonempty data before returning. RequestClose is locally
+	 * idempotent. Success with *queued=TRUE promises one OperationCompleted;
+	 * success with *queued=FALSE is an already-closed Close, with no callback.
+	 * Failure always sets *queued=FALSE and produces no callback.
+	 * Completion may occur before submission returns on another thread.
+	 * token is returned unchanged and is not dereferenced by native code.
 	 * A closed endpoint survives plugin/session teardown until its last Release.
 	 */
 	struct s_nowproto_endpoint
 	{
 		void (*Retain)(NowProtoEndpoint* endpoint);
 		void (*Release)(NowProtoEndpoint* endpoint);
-		UINT (*Write)(NowProtoEndpoint* endpoint, const BYTE* data, UINT32 size);
-		UINT (*Close)(NowProtoEndpoint* endpoint);
+		UINT (*SubmitWrite)
+		(NowProtoEndpoint* endpoint, const BYTE* data, UINT32 size, void* token, BOOL* queued);
+		UINT (*RequestClose)(NowProtoEndpoint* endpoint, void* token, BOOL* queued);
 	};
 
 	/**
-	 * Callbacks run synchronously on native channel/operation threads. They must
+	 * V2 requires asynchronous DVC mode. Callbacks run on the DVC worker. They must
 	 * only copy/enqueue work, never wait for managed async work or destroy the
-	 * session inline. Reentrant Write/Close/Retain/Release are supported, including
-	 * Closed inside Offer or Receive. No plugin lock is held during callbacks.
+	 * session inline. Reentrant submissions only enqueue, never execute inline.
+	 * No NOW plugin lock is held during callbacks. Core receive/close callbacks
+	 * may hold the channel-table lock; callbacks must remain nonblocking.
 	 * The endpoint and receive buffer are borrowed for the callback duration.
 	 * Offer occurs on OnOpen, after the DVC create response; Closed occurs once
 	 * for every offered endpoint, including disconnect/teardown.
@@ -61,6 +67,10 @@ extern "C"
 		void (*Offer)(void* custom, NowProtoEndpoint* endpoint);
 		void (*Receive)(void* custom, NowProtoEndpoint* endpoint, const BYTE* data, size_t size);
 		void (*Closed)(void* custom, NowProtoEndpoint* endpoint);
+		/* Native operation result or ERROR_OPERATION_ABORTED at shutdown; not a
+		 * transport delivery/remote acknowledgement. May follow Closed. */
+		void (*OperationCompleted)(void* custom, NowProtoEndpoint* endpoint, void* token,
+		                           UINT status);
 	} NowProtoClientCallbacksV2;
 
 	/**
@@ -68,7 +78,8 @@ extern "C"
 	 * Call before the first OnOpen (the first OnChannelConnected is early enough).
 	 * The table is copied once and cannot be changed after opt-in or first open.
 	 * V2 allows overlapping offers and replaces legacy Read/Write dispatch:
-	 * legacy Write returns ERROR_INVALID_STATE; only endpoint Write/Close apply.
+	 * legacy Write returns ERROR_INVALID_STATE; only endpoint submissions apply.
+	 * Synchronous/replay mode returns ERROR_NOT_SUPPORTED.
 	 * Without opt-in, the legacy single-channel behavior is preserved.
 	 */
 	FREERDP_API UINT freerdp_nowproto_client_set_callbacks(

@@ -3,7 +3,7 @@ set(MODULE_NAME "TestNowProto")
 disable_warnings_for_directory(${CMAKE_CURRENT_BINARY_DIR})
 
 set(DRIVER ${MODULE_NAME}.c)
-set(TESTS TestNowProtoLifetime.c)
+set(TESTS TestNowProtoLifetime.c TestNowProtoDispatchFaults.c)
 
 create_test_sourcelist(SRCS ${DRIVER} ${TESTS})
 add_executable(${MODULE_NAME} ${SRCS})
