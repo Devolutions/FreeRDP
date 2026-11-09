@@ -49,6 +49,7 @@ typedef struct
 
 	wHashTable* listeners;
 	wHashTable* channelsById;
+	struct s_drdynvc_channel_gate* channelGate;
 	wStreamPool* pool;
 } DVCMAN;
 
@@ -105,6 +106,7 @@ typedef struct
 	ZGFX_CONTEXT* decompressor;
 	CRITICAL_SECTION lock;
 	DVCMAN_CHANNEL_STATS stats;
+	DrdynvcChannelHandle* handle;
 } DVCMAN_CHANNEL;
 
 typedef enum

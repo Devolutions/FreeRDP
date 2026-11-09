@@ -52,6 +52,7 @@ static const char* channel_state2str(DVC_CHANNEL_STATE state)
 }
 
 static void dvcman_channel_free(DVCMAN_CHANNEL* channel);
+static void dvcman_channel_handle_detach(DVCMAN_CHANNEL* channel);
 
 static UINT dvcman_channel_close(DVCMAN_CHANNEL* channel, BOOL perRequest, BOOL fromHashTableFn);
 static void dvcman_free(drdynvcPlugin* drdynvc, IWTSVirtualChannelManager* pChannelMgr);
@@ -442,6 +443,8 @@ static void dvcman_channel_free(DVCMAN_CHANNEL* channel)
 	if (!channel)
 		return;
 
+	dvcman_channel_handle_detach(channel);
+
 	if (channel->dvcman)
 	{
 		drdynvcPlugin* plugin = channel->dvcman->drdynvc;
@@ -480,6 +483,112 @@ static void dvcman_channel_unref(DVCMAN_CHANNEL* channel)
 	DVCMAN* dvcman = channel->dvcman;
 	if (dvcman)
 		HashTable_Remove(dvcman->channelsById, &channel->channel_id);
+}
+
+typedef struct s_drdynvc_channel_gate
+{
+	volatile LONG refs;
+	wHashTable* channels;
+	BOOL clearing;
+} DRDYNVC_CHANNEL_GATE;
+
+struct s_drdynvc_channel_handle
+{
+	volatile LONG refs;
+	DRDYNVC_CHANNEL_GATE* gate;
+	DVCMAN_CHANNEL* channel; /* Protected by gate->channels' recursive lock. */
+};
+
+static void dvcman_channel_gate_release(DRDYNVC_CHANNEL_GATE* gate)
+{
+	if (InterlockedDecrement(&gate->refs) == 0)
+	{
+		HashTable_Free(gate->channels);
+		free(gate);
+	}
+}
+
+void freerdp_drdynvc_channel_handle_release(DrdynvcChannelHandle* handle)
+{
+	if (handle && (InterlockedDecrement(&handle->refs) == 0))
+	{
+		dvcman_channel_gate_release(handle->gate);
+		free(handle);
+	}
+}
+
+static void dvcman_channel_handle_detach(DVCMAN_CHANNEL* channel)
+{
+	DrdynvcChannelHandle* handle = channel->handle;
+	if (handle)
+	{
+		handle->channel = nullptr;
+		channel->handle = nullptr;
+		freerdp_drdynvc_channel_handle_release(handle);
+	}
+}
+
+DrdynvcChannelHandle* freerdp_drdynvc_channel_handle_new(IWTSVirtualChannel* iface)
+{
+	DVCMAN_CHANNEL* channel = (DVCMAN_CHANNEL*)iface;
+	if (!channel || !channel->dvcman || channel->handle)
+		return nullptr;
+
+	/* Called under the channel-table lock during OnNewChannelConnection. */
+	DVCMAN* manager = channel->dvcman;
+	if (!manager->channelGate)
+	{
+		manager->channelGate = calloc(1, sizeof(DRDYNVC_CHANNEL_GATE));
+		if (!manager->channelGate)
+			return nullptr;
+		manager->channelGate->refs = 1;
+		manager->channelGate->channels = manager->channelsById;
+	}
+
+	DrdynvcChannelHandle* handle = calloc(1, sizeof(DrdynvcChannelHandle));
+	if (!handle)
+		return nullptr;
+	handle->refs = 2; /* The channel and the acquiring plugin each own a reference. */
+	handle->gate = manager->channelGate;
+	handle->channel = channel;
+	InterlockedIncrement(&handle->gate->refs);
+	channel->handle = handle;
+	return handle;
+}
+
+static UINT dvcman_channel_handle_call(DrdynvcChannelHandle* handle, const BYTE* data, UINT32 size,
+                                       BOOL close)
+{
+	if (!handle || (!close && !data && size))
+		return ERROR_INVALID_PARAMETER;
+
+	UINT status = close ? CHANNEL_RC_OK : ERROR_NOT_CONNECTED;
+	DRDYNVC_CHANNEL_GATE* gate = handle->gate;
+	HashTable_Lock(gate->channels);
+	DVCMAN_CHANNEL* channel = handle->channel;
+	if (!gate->clearing && channel && (channel->state == DVC_CHANNEL_RUNNING))
+	{
+		/* Close (including legacy zero-length Write) can remove the channel. */
+		InterlockedIncrement(&channel->refCounter);
+		if (close)
+			status = channel->iface.Close(&channel->iface);
+		else
+			status = channel->iface.Write(&channel->iface, size, data, nullptr);
+		dvcman_channel_unref(channel);
+	}
+	HashTable_Unlock(gate->channels);
+	return status;
+}
+
+UINT freerdp_drdynvc_channel_handle_write(DrdynvcChannelHandle* handle, const BYTE* data,
+                                          UINT32 size)
+{
+	return dvcman_channel_handle_call(handle, data, size, FALSE);
+}
+
+UINT freerdp_drdynvc_channel_handle_close(DrdynvcChannelHandle* handle)
+{
+	return dvcman_channel_handle_call(handle, nullptr, 0, TRUE);
 }
 
 WINPR_ATTR_NODISCARD
@@ -536,6 +645,7 @@ static UINT dvcman_call_on_receive(DVCMAN_CHANNEL* channel, wStream* data)
 static UINT dvcman_channel_close(DVCMAN_CHANNEL* channel, BOOL perRequest, BOOL fromHashTableFn)
 {
 	UINT error = CHANNEL_RC_OK;
+	UINT transportError = CHANNEL_RC_OK;
 	DrdynvcClientContext* context = nullptr;
 
 	WINPR_ASSERT(channel);
@@ -554,6 +664,8 @@ static UINT dvcman_channel_close(DVCMAN_CHANNEL* channel, BOOL perRequest, BOOL 
 					           channel->channel_name);
 
 				error = dvcchannel_send_close(channel);
+				if (channel->handle)
+					transportError = error;
 				if (error != CHANNEL_RC_OK)
 				{
 					if (perRequest)
@@ -598,7 +710,7 @@ static UINT dvcman_channel_close(DVCMAN_CHANNEL* channel, BOOL perRequest, BOOL 
 			break;
 	}
 
-	return error;
+	return (error == CHANNEL_RC_OK) ? transportError : error;
 }
 
 WINPR_ATTR_MALLOC(dvcman_channel_free, 1)
@@ -650,6 +762,17 @@ fail:
 	return nullptr;
 }
 
+static void dvcman_clear_channels(DVCMAN* dvcman)
+{
+	HashTable_Lock(dvcman->channelsById);
+	if (dvcman->channelGate)
+		dvcman->channelGate->clearing = TRUE;
+	HashTable_Clear(dvcman->channelsById);
+	if (dvcman->channelGate)
+		dvcman->channelGate->clearing = FALSE;
+	HashTable_Unlock(dvcman->channelsById);
+}
+
 static void dvcman_clear(drdynvcPlugin* drdynvc, IWTSVirtualChannelManager* pChannelMgr)
 {
 	DVCMAN* dvcman = (DVCMAN*)pChannelMgr;
@@ -657,7 +780,7 @@ static void dvcman_clear(drdynvcPlugin* drdynvc, IWTSVirtualChannelManager* pCha
 	WINPR_ASSERT(dvcman);
 	WINPR_UNUSED(drdynvc);
 
-	HashTable_Clear(dvcman->channelsById);
+	dvcman_clear_channels(dvcman);
 	ArrayList_Clear(dvcman->plugins);
 	ArrayList_Clear(dvcman->plugin_names);
 	HashTable_Clear(dvcman->listeners);
@@ -670,7 +793,14 @@ static void dvcman_free(drdynvcPlugin* drdynvc, IWTSVirtualChannelManager* pChan
 	WINPR_ASSERT(dvcman);
 	WINPR_UNUSED(drdynvc);
 
-	HashTable_Free(dvcman->channelsById);
+	if (dvcman->channelGate)
+	{
+		/* Outstanding leases keep only the empty table and its lock alive. */
+		dvcman_clear_channels(dvcman);
+		dvcman_channel_gate_release(dvcman->channelGate);
+	}
+	else
+		HashTable_Free(dvcman->channelsById);
 	ArrayList_Free(dvcman->plugins);
 	ArrayList_Free(dvcman->plugin_names);
 	HashTable_Free(dvcman->listeners);
@@ -964,6 +1094,9 @@ static UINT dvcman_open_channel(drdynvcPlugin* drdynvc, DVCMAN_CHANNEL* channel)
 
 	WINPR_ASSERT(drdynvc);
 	WINPR_ASSERT(channel);
+	DVCMAN* manager = channel->dvcman;
+	HashTable_Lock(manager->channelsById);
+	InterlockedIncrement(&channel->refCounter);
 	if (channel->state == DVC_CHANNEL_RUNNING)
 	{
 		IWTSVirtualChannelCallback* pCallback = channel->channel_callback;
@@ -985,6 +1118,8 @@ static UINT dvcman_open_channel(drdynvcPlugin* drdynvc, DVCMAN_CHANNEL* channel)
 	}
 
 out:
+	dvcman_channel_unref(channel);
+	HashTable_Unlock(manager->channelsById);
 	return error;
 }
 
@@ -1967,7 +2102,7 @@ static DWORD WINAPI drdynvc_virtual_channel_client_thread(LPVOID arg)
 		 * event handlers. */
 		DVCMAN* drdynvcMgr = (DVCMAN*)drdynvc->channel_mgr;
 
-		HashTable_Clear(drdynvcMgr->channelsById);
+		dvcman_clear_channels(drdynvcMgr);
 	}
 
 	if (error && drdynvc->rdpcontext)
@@ -2147,7 +2282,7 @@ static UINT drdynvc_virtual_channel_event_disconnected(drdynvcPlugin* drdynvc)
 			 * event handlers. */
 			DVCMAN* drdynvcMgr = (DVCMAN*)drdynvc->channel_mgr;
 
-			HashTable_Clear(drdynvcMgr->channelsById);
+			dvcman_clear_channels(drdynvcMgr);
 		}
 	}
 

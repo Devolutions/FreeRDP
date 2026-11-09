@@ -24,6 +24,7 @@
 
 #include <winpr/wtypes.h>
 #include <freerdp/api.h>
+#include <freerdp/dvc.h>
 
 #include <freerdp/channels/drdynvc.h>
 
@@ -37,6 +38,23 @@ extern "C"
 	 */
 
 	typedef struct s_drdynvc_client_context DrdynvcClientContext;
+
+	/**
+	 * Opt-in transport lease for plugins needing cross-thread endpoint operations.
+	 * Acquire only from OnNewChannelConnection, with that callback's channel.
+	 * Each lease identifies one offer, never a channel ID that could be reused.
+	 * The caller owns the returned lease until Release; Write/Close may invoke
+	 * channel callbacks synchronously. A lease remains valid after session teardown.
+	 * Do not destroy the RDP session synchronously from a channel callback.
+	 */
+	typedef struct s_drdynvc_channel_handle DrdynvcChannelHandle;
+
+	FREERDP_API DrdynvcChannelHandle*
+	freerdp_drdynvc_channel_handle_new(IWTSVirtualChannel* channel);
+	FREERDP_API void freerdp_drdynvc_channel_handle_release(DrdynvcChannelHandle* handle);
+	FREERDP_API UINT freerdp_drdynvc_channel_handle_write(DrdynvcChannelHandle* handle,
+	                                                      const BYTE* data, UINT32 size);
+	FREERDP_API UINT freerdp_drdynvc_channel_handle_close(DrdynvcChannelHandle* handle);
 
 	/** @brief Dynamic channel stats struct. Contains statistic information for a single dynamic
 	 * channel

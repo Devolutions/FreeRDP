@@ -1,0 +1,153 @@
+NOW native endpoint prototype
+=============================
+
+Compatibility and opt-in
+------------------------
+
+NowProtoClientContext remains exactly { handle, custom, Write, Read }. Existing
+consumers still receive that context through drdynvc's OnChannelConnected and
+OnChannelDisconnected. Without opt-in, NOW still rejects a second simultaneous
+offer and uses legacy Read/Write. A disconnected legacy Write now returns
+ERROR_NOT_CONNECTED rather than dereferencing a freed callback.
+The legacy context itself is still session-owned; legacy callers must stop
+using it before native session teardown. Only retained V2 endpoints outlive it.
+
+The new exported freerdp_nowproto_client_set_callbacks(context, callbacks) accepts
+NowProtoClientCallbacksV2 from <freerdp/client/nowproto.h>. Set size to sizeof the
+struct and version to NOWPROTO_CLIENT_CALLBACKS_VERSION_2. All three callbacks
+(Offer, Receive, Closed) are required. The table is copied and frozen. Install it
+before the first channel opens; the first NOW OnChannelConnected callback is an
+appropriate interop attachment point. After opt-in legacy Write explicitly returns
+ERROR_INVALID_STATE and legacy Read is no longer used.
+
+V2 ABI:
+
+  NowProtoClientCallbacksV2:
+    UINT32 size, version;
+    void* custom;
+    void Offer(void* custom, NowProtoEndpoint* endpoint);
+    void Receive(void* custom, NowProtoEndpoint* endpoint,
+                 const BYTE* data, size_t size);
+    void Closed(void* custom, NowProtoEndpoint* endpoint);
+
+  NowProtoEndpoint (function pointers, each taking endpoint first):
+    void Retain(endpoint);
+    void Release(endpoint);
+    UINT Write(endpoint, const BYTE* data, UINT32 size);
+    UINT Close(endpoint);
+
+These are native C ABI types (including native size_t and pointer alignment).
+Managed bindings must root their delegates and custom state until native session
+teardown returns. No NativeSessions or RDM binding is included in this prototype.
+
+Offer and lifetime contract
+---------------------------
+
+Each accepted offer gets a distinct refcounted endpoint. V2 accepts overlapping
+offers but does not choose a winner or retire the predecessor automatically.
+Offer runs on OnOpen, after the CREATE response, not while the channel is in
+INIT. Receive and Closed always carry that same endpoint identity. Closed runs
+once per offered endpoint, for local close, remote close, or session teardown.
+The listener-level drdynvc interface deliberately stays the legacy context;
+consumers must use V2 events, not infer endpoint identity from that interface.
+
+Callback endpoints and receive buffers are borrowed. Retain the endpoint and
+copy receive bytes before enqueueing asynchronous work. Release every retained
+reference, even after Closed or session teardown. Operations need an owned
+reference; racing the release of one's final reference against a new operation
+is a consumer error. Internal callback/operation references permit a consumer to
+release its own reference from a reentrant callback.
+
+Callbacks are synchronous, may run on different native threads, and must only
+copy/enqueue work. They must never wait for managed asynchronous work, join a
+thread that is calling an endpoint, or synchronously destroy the RDP session.
+Close may invoke Closed inside Offer or Receive. No NOW plugin lock is held
+during user callbacks, but drdynvc's recursive channel-table lock is held.
+
+Write submits/copies nonempty bytes synchronously and returns the transport's
+status. It rejects null/empty input with ERROR_INVALID_PARAMETER and a retired
+endpoint with ERROR_NOT_CONNECTED. Close is idempotent, targets only its offer,
+and does not await a remote close acknowledgement. Its first call reports a
+close-PDU send failure but still retires the endpoint locally; subsequent calls
+are successful no-ops. A stale Close is a no-op,
+never a request against a newer offer, even when the server reuses a channel ID.
+No native negotiation, admission policy, queue, timeout, or generation-publication
+logic is added.
+
+Transport safety
+----------------
+
+NOW uses its own listener rather than changing generic_dynvc's single-current
+callback policy. A small opt-in drdynvc transport lease is necessary because a
+raw IWTSVirtualChannel pointer and its channel ID do not provide lifetime safety.
+The lease serializes operations with receive/remote-close/table teardown using
+the existing channelsById lock, pins the native channel during an operation,
+and becomes inert when that specific channel is freed. Retained leases keep
+only the empty channel table/lock alive after manager destruction, not the
+session or transport. During table teardown all lease operations are disabled,
+including reentrant cross-channel close from Closed.
+
+OnOpen also takes the table lock and a channel reference so that synchronous
+Close from Offer cannot free its caller's channel. No public IWTS* structure
+layout is changed. Other generic DVC clients do not opt into leases.
+
+Validation
+----------
+
+Use the repository's internal test mode (BUILD_TESTING=OFF,
+BUILD_TESTING_INTERNAL=ON), with WITH_CLIENT_COMMON and CHANNEL_NOWPROTO_CLIENT.
+Build targets TestNowProto and TestDrdynvc, then run:
+
+  ctest --test-dir <build> -R 'Test(NowProtoLifetime|DrdynvcUnknownChannel)$' \
+    --output-on-failure
+
+TestNowProtoLifetime exercises the actual drdynvc PDU path with an in-process
+static-channel transport: legacy compatibility, endpoint routing, overlapping
+offers, reused wire IDs, stale/idempotent close, reentrant Offer/Receive/Closed
+with reference release, write versus remote/local close, and write versus
+session teardown with endpoints retained afterwards. Forced transport barriers
+exercise actual lock contention; injected write/close failures verify statuses.
+
+This is not a Windows/macOS/Linux live-server interoperability or RDM supervision
+parity test. Real network/server shutdown behavior still needs integration
+coverage. The opt-in lease path preserves close-PDU errors that drdynvc's legacy
+callback result precedence otherwise hides; generic clients retain that legacy
+behavior.
+
+Prototype validation on macOS arm64:
+
+  cmake --build build/now-native --target TestDrdynvc TestNowProto --parallel 4
+  ctest --test-dir build/now-native \
+    -R 'Test(NowProtoLifetime|DrdynvcUnknownChannel)$' --repeat until-fail:50 \
+    --output-on-failure --timeout 60
+
+Both focused tests passed 50 repetitions each. The build uses minimal-library,
+Debug, WITH_CLIENT_COMMON=ON, BUILD_TESTING=OFF, BUILD_TESTING_INTERNAL=ON,
+ENABLE_WARNING_VERBOSE=OFF, CHANNEL_RDPECAM_CLIENT=OFF (no libv4l on macOS).
+
+  ASAN_OPTIONS=detect_leaks=0 UBSAN_OPTIONS=halt_on_error=1 \
+    ctest --test-dir build/now-native-asan \
+      -R 'Test(NowProtoLifetime|DrdynvcUnknownChannel)$' --repeat until-fail:20 \
+      --output-on-failure --timeout 60
+
+Both tests passed 20 repetitions each with -fsanitize=address,undefined and
+-fno-omit-frame-pointer. LeakSanitizer is disabled on macOS. This configuration
+uses WITH_UNICODE_BUILTIN=OFF: the initial built-in converter run stopped in
+pre-existing unicode_builtin.c:246 null-pointer arithmetic, also reproduced by
+TestDrdynvcUnknownChannel before any NOW use.
+
+ThreadSanitizer validation is NOT clean: -fsanitize=thread first stops in the
+existing freerdp_timer_free/timer_thread race. Suppressing only that baseline
+race exposes WinPR's critical.c:193/243 OwningThread read/write race during
+real lock contention. Neither baseline issue is changed or broadly suppressed
+by this prototype. Forced-race functional tests and ASan/UBSan pass, but these
+do not establish a TSan-clean runtime or production interoperability.
+
+  TSAN_OPTIONS=halt_on_error=1 \
+    ctest --test-dir build/now-native-tsan \
+      -R 'Test(NowProtoLifetime|DrdynvcUnknownChannel)$' --output-on-failure
+
+The diagnostic follow-up used a temporary suppression containing only
+"race:freerdp_timer_free"; it still failed on WinPR lock metadata, not on NOW
+endpoint state. Because it stops there, full NOW race coverage remains
+unverified. Build and validation logs are retained in each build directory.

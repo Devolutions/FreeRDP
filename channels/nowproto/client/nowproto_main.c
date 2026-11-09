@@ -1,143 +1,270 @@
 #include <freerdp/config.h>
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
 #include <winpr/crt.h>
+#include <winpr/interlocked.h>
 #include <winpr/synch.h>
-#include <winpr/print.h>
-#include <winpr/stream.h>
-#include <winpr/cmdline.h>
-#include <winpr/collections.h>
 
-#include <freerdp/addin.h>
-#include <freerdp/client/channels.h>
 #include <freerdp/channels/log.h>
-
-#define TAG CHANNELS_TAG("nowproto.client")
+#include <freerdp/client/drdynvc.h>
 
 #include "nowproto_main.h"
 
+#define TAG CHANNELS_TAG("nowproto.client")
+
+typedef struct s_nowproto_channel NOWPROTO_CHANNEL;
+
 typedef struct
 {
-	GENERIC_DYNVC_PLUGIN base;
-	NowProtoClientContext* context;
+	IWTSPlugin iface;
+	IWTSListenerCallback listenerCallback;
+	IWTSListener* listener;
+	IWTSVirtualChannelManager* manager;
+	NowProtoClientContext context;
+	CRITICAL_SECTION lock;
+	NowProtoClientCallbacksV2 callbacks;
+	NOWPROTO_CHANNEL* current;
+	BOOL opened;
 } NOWPROTO_PLUGIN;
 
-static UINT nowproto_write(NowProtoClientContext* context, void* data, int size)
+struct s_nowproto_channel
 {
-	NOWPROTO_PLUGIN* nowproto = NULL;
-	GENERIC_CHANNEL_CALLBACK* callback = NULL;
-	wStream* s;
-	UINT status;
-	
-	WINPR_ASSERT(context);
-	nowproto = (NOWPROTO_PLUGIN*) context->handle;
-	WINPR_ASSERT(nowproto);
-	
-	s = Stream_New(NULL, size);
+	IWTSVirtualChannelCallback iface;
+	NowProtoEndpoint endpoint;
+	volatile LONG refs;
+	NOWPROTO_PLUGIN* plugin;
+	DrdynvcChannelHandle* transport;
+	NowProtoClientCallbacksV2 callbacks;
+	BOOL offered;
+};
 
-	if (!s)
+static NOWPROTO_CHANNEL* nowproto_channel(NowProtoEndpoint* endpoint)
+{
+	return CONTAINING_RECORD(endpoint, NOWPROTO_CHANNEL, endpoint);
+}
+
+static void nowproto_retain(NowProtoEndpoint* endpoint)
+{
+	InterlockedIncrement(&nowproto_channel(endpoint)->refs);
+}
+
+static void nowproto_release(NowProtoEndpoint* endpoint)
+{
+	NOWPROTO_CHANNEL* channel = nowproto_channel(endpoint);
+	if (InterlockedDecrement(&channel->refs) == 0)
 	{
-		WLog_ERR(TAG, "Stream_New failed!");
-		return CHANNEL_RC_NO_MEMORY;
+		freerdp_drdynvc_channel_handle_release(channel->transport);
+		free(channel);
 	}
-	
-	Stream_Write(s, (void*) data, size);
-	Stream_SealLength(s);
+}
 
-	callback = nowproto->base.listener_callback->channel_callback;
-	status = callback->channel->Write(callback->channel, (UINT32) Stream_Length(s), Stream_Buffer(s), NULL);
-	
-	Stream_Free(s, TRUE);
-	
-	if (status != CHANNEL_RC_OK)
-	{
-		WLog_ERR(TAG, "nowproto_write failed with %s [%08"PRIX32"]", WTSErrorToString(status), status);
-	}
-
+static UINT nowproto_endpoint_write(NowProtoEndpoint* endpoint, const BYTE* data, UINT32 size)
+{
+	if (!data || !size)
+		return ERROR_INVALID_PARAMETER;
+	NOWPROTO_CHANNEL* channel = nowproto_channel(endpoint);
+	nowproto_retain(endpoint);
+	const UINT status = freerdp_drdynvc_channel_handle_write(channel->transport, data, size);
+	nowproto_release(endpoint);
 	return status;
 }
 
-static UINT nowproto_on_data_received(IWTSVirtualChannelCallback* pChannelCallback, wStream* data)
+static UINT nowproto_endpoint_close(NowProtoEndpoint* endpoint)
 {
-	GENERIC_CHANNEL_CALLBACK* callback = (GENERIC_CHANNEL_CALLBACK*) pChannelCallback;
-	NOWPROTO_PLUGIN* nowproto = NULL;
-	NowProtoClientContext* context = NULL;
-	UINT ret = CHANNEL_RC_OK;
-	
-	WINPR_ASSERT(callback);
-	WINPR_ASSERT(data);
-	
-	nowproto = (NOWPROTO_PLUGIN*) callback->plugin;
-	WINPR_ASSERT(nowproto);
-	
-	context = nowproto->context;
-	WINPR_ASSERT(context);
-	
-	if (context->Read)
+	NOWPROTO_CHANNEL* channel = nowproto_channel(endpoint);
+	nowproto_retain(endpoint);
+	const UINT status = freerdp_drdynvc_channel_handle_close(channel->transport);
+	nowproto_release(endpoint);
+	return status;
+}
+
+static UINT nowproto_write(NowProtoClientContext* context, void* data, int size)
+{
+	if (!context || (size < 0) || (!data && size))
+		return ERROR_INVALID_PARAMETER;
+
+	NOWPROTO_PLUGIN* plugin = context->handle;
+	EnterCriticalSection(&plugin->lock);
+	NOWPROTO_CHANNEL* channel = plugin->current;
+	const BOOL direct = plugin->callbacks.version != 0;
+	if (channel && !direct)
+		nowproto_retain(&channel->endpoint);
+	LeaveCriticalSection(&plugin->lock);
+
+	if (direct)
+		return ERROR_INVALID_STATE;
+	if (!channel)
+		return ERROR_NOT_CONNECTED;
+	const UINT status =
+	    freerdp_drdynvc_channel_handle_write(channel->transport, data, (UINT32)size);
+	nowproto_release(&channel->endpoint);
+	return status;
+}
+
+UINT freerdp_nowproto_client_set_callbacks(NowProtoClientContext* context,
+                                           const NowProtoClientCallbacksV2* callbacks)
+{
+	if (!context || !callbacks || (callbacks->size != sizeof(*callbacks)) ||
+	    (callbacks->version != NOWPROTO_CLIENT_CALLBACKS_VERSION_2) || !callbacks->Offer ||
+	    !callbacks->Receive || !callbacks->Closed)
+		return ERROR_INVALID_PARAMETER;
+
+	NOWPROTO_PLUGIN* plugin = context->handle;
+	EnterCriticalSection(&plugin->lock);
+	UINT status = ERROR_INVALID_STATE;
+	if (!plugin->opened && !plugin->callbacks.version)
 	{
-		ret = context->Read(context, Stream_Pointer(data), Stream_GetRemainingLength(data));
+		plugin->callbacks = *callbacks;
+		status = CHANNEL_RC_OK;
 	}
-	
-	return ret;
+	LeaveCriticalSection(&plugin->lock);
+	return status;
 }
 
-static UINT nowproto_on_close(IWTSVirtualChannelCallback* pChannelCallback)
+static UINT nowproto_on_open(IWTSVirtualChannelCallback* callback)
 {
-	free(pChannelCallback);
+	NOWPROTO_CHANNEL* channel = (NOWPROTO_CHANNEL*)callback;
+	NOWPROTO_PLUGIN* plugin = channel->plugin;
+	nowproto_retain(&channel->endpoint);
+	EnterCriticalSection(&plugin->lock);
+	plugin->opened = TRUE;
+	channel->callbacks = plugin->callbacks;
+	channel->offered = channel->callbacks.version != 0;
+	LeaveCriticalSection(&plugin->lock);
+
+	if (channel->offered)
+		channel->callbacks.Offer(channel->callbacks.custom, &channel->endpoint);
+	nowproto_release(&channel->endpoint);
 	return CHANNEL_RC_OK;
 }
 
-/**
- * Channel Client Interface
- */
-
-static const IWTSVirtualChannelCallback nowproto_callbacks = { nowproto_on_data_received,
-	                                                           NULL, /* Open */
-	                                                           nowproto_on_close, NULL };
-
-static UINT init_plugin_cb(GENERIC_DYNVC_PLUGIN* base, WINPR_ATTR_UNUSED rdpContext* rcontext, rdpSettings* settings)
+static UINT nowproto_on_data_received(IWTSVirtualChannelCallback* callback, wStream* data)
 {
-	NowProtoClientContext* context = NULL;
-	NOWPROTO_PLUGIN* nowproto = (NOWPROTO_PLUGIN*) base;
+	NOWPROTO_CHANNEL* channel = (NOWPROTO_CHANNEL*)callback;
+	UINT status = CHANNEL_RC_OK;
+	nowproto_retain(&channel->endpoint);
+	if (channel->offered)
+		channel->callbacks.Receive(channel->callbacks.custom, &channel->endpoint,
+		                           Stream_Pointer(data), Stream_GetRemainingLength(data));
+	else
+	{
+		NowProtoClientContext* context = &channel->plugin->context;
+		if (context->Read)
+			status = context->Read(context, Stream_Pointer(data), Stream_GetRemainingLength(data));
+	}
+	nowproto_release(&channel->endpoint);
+	return status;
+}
 
-	WINPR_ASSERT(nowproto);
-	WINPR_UNUSED(settings);
+static UINT nowproto_on_close(IWTSVirtualChannelCallback* callback)
+{
+	NOWPROTO_CHANNEL* channel = (NOWPROTO_CHANNEL*)callback;
+	NOWPROTO_PLUGIN* plugin = channel->plugin;
+	EnterCriticalSection(&plugin->lock);
+	if (plugin->current == channel)
+		plugin->current = nullptr;
+	LeaveCriticalSection(&plugin->lock);
 
-	 context = (NowProtoClientContext*) calloc(1, sizeof(NowProtoClientContext));
-	
-	 if (!context)
-	 {
-	 	WLog_Print(base->log, WLOG_ERROR, "calloc failed!");
-	 	return CHANNEL_RC_NO_MEMORY;
-	 }
-
-	context->handle = (void*) nowproto;
-	context->Write = nowproto_write;
-
-	nowproto->context = context;
-	nowproto->base.iface.pInterface = (void*) context;
-	
+	if (channel->offered)
+		channel->callbacks.Closed(channel->callbacks.custom, &channel->endpoint);
+	nowproto_release(&channel->endpoint); /* The native channel callback's reference. */
 	return CHANNEL_RC_OK;
 }
 
-static void terminate_plugin_cb(GENERIC_DYNVC_PLUGIN* base)
+static UINT nowproto_on_new_channel(IWTSListenerCallback* callback, IWTSVirtualChannel* transport,
+                                    WINPR_ATTR_UNUSED BYTE* data, BOOL* accept,
+                                    IWTSVirtualChannelCallback** result)
 {
-	NOWPROTO_PLUGIN* nowproto = (NOWPROTO_PLUGIN*) base;
+	NOWPROTO_PLUGIN* plugin = CONTAINING_RECORD(callback, NOWPROTO_PLUGIN, listenerCallback);
+	*accept = FALSE;
+	*result = nullptr;
+	EnterCriticalSection(&plugin->lock);
+	const BOOL busy = plugin->current && !plugin->callbacks.version;
+	LeaveCriticalSection(&plugin->lock);
+	if (busy)
+		return ERROR_DEVICE_ALREADY_ATTACHED;
 
-	free(nowproto->context);
+	NOWPROTO_CHANNEL* channel = calloc(1, sizeof(*channel));
+	if (!channel)
+		return CHANNEL_RC_NO_MEMORY;
+	channel->transport = freerdp_drdynvc_channel_handle_new(transport);
+	if (!channel->transport)
+	{
+		free(channel);
+		return CHANNEL_RC_NO_MEMORY;
+	}
+	channel->iface.OnDataReceived = nowproto_on_data_received;
+	channel->iface.OnOpen = nowproto_on_open;
+	channel->iface.OnClose = nowproto_on_close;
+	channel->endpoint.Retain = nowproto_retain;
+	channel->endpoint.Release = nowproto_release;
+	channel->endpoint.Write = nowproto_endpoint_write;
+	channel->endpoint.Close = nowproto_endpoint_close;
+	channel->refs = 1;
+	channel->plugin = plugin;
+
+	EnterCriticalSection(&plugin->lock);
+	plugin->current = channel;
+	LeaveCriticalSection(&plugin->lock);
+	*accept = TRUE;
+	*result = &channel->iface;
+	return CHANNEL_RC_OK;
 }
 
-/**
- * Function description
- *
- * @return 0 on success, otherwise a Win32 error code
- */
-FREERDP_ENTRY_POINT(UINT VCAPITYPE nowproto_DVCPluginEntry(IDRDYNVC_ENTRY_POINTS* pEntryPoints))
+static UINT nowproto_initialize(IWTSPlugin* iface, IWTSVirtualChannelManager* manager)
 {
-	return freerdp_generic_DVCPluginEntry(pEntryPoints, TAG, NOWPROTO_DVC_CHANNEL_NAME,
-	                                      sizeof(NOWPROTO_PLUGIN), sizeof(GENERIC_CHANNEL_CALLBACK),
-	                                      &nowproto_callbacks, init_plugin_cb, terminate_plugin_cb);
+	NOWPROTO_PLUGIN* plugin = (NOWPROTO_PLUGIN*)iface;
+	if (!manager || plugin->manager)
+		return ERROR_INVALID_STATE;
+	IWTSListener* listener = nullptr;
+	const UINT status = manager->CreateListener(manager, NOWPROTO_DVC_CHANNEL_NAME, 0,
+	                                            &plugin->listenerCallback, &listener);
+	if (status == CHANNEL_RC_OK)
+	{
+		plugin->manager = manager;
+		plugin->listener = listener;
+		plugin->listener->pInterface = &plugin->context;
+	}
+	return status;
+}
+
+static UINT nowproto_terminated(IWTSPlugin* iface)
+{
+	NOWPROTO_PLUGIN* plugin = (NOWPROTO_PLUGIN*)iface;
+	/* drdynvc closes all channels before terminating plugins. Retained endpoints
+	 * have inert transport handles and never dereference this plugin again. */
+	if (plugin->listener)
+	{
+		const UINT status = plugin->manager->DestroyListener(plugin->manager, plugin->listener);
+		if (status != CHANNEL_RC_OK)
+			WLog_ERR(TAG, "DestroyListener failed: %" PRIu32, status);
+	}
+	DeleteCriticalSection(&plugin->lock);
+	free(plugin);
+	return CHANNEL_RC_OK;
+}
+
+FREERDP_ENTRY_POINT(UINT VCAPITYPE nowproto_DVCPluginEntry(IDRDYNVC_ENTRY_POINTS* entry))
+{
+	if (!entry || !entry->GetPlugin || !entry->RegisterPlugin)
+		return ERROR_INVALID_PARAMETER;
+	if (entry->GetPlugin(entry, NOWPROTO_DVC_CHANNEL_NAME))
+		return CHANNEL_RC_ALREADY_INITIALIZED;
+	NOWPROTO_PLUGIN* plugin = calloc(1, sizeof(*plugin));
+	if (!plugin)
+		return CHANNEL_RC_NO_MEMORY;
+	if (!InitializeCriticalSectionEx(&plugin->lock, 0, 0))
+	{
+		free(plugin);
+		return CHANNEL_RC_NO_MEMORY;
+	}
+	plugin->iface.Initialize = nowproto_initialize;
+	plugin->iface.Terminated = nowproto_terminated;
+	plugin->iface.pInterface = &plugin->context;
+	plugin->context.handle = plugin;
+	plugin->context.Write = nowproto_write;
+	plugin->listenerCallback.OnNewChannelConnection = nowproto_on_new_channel;
+	const UINT status = entry->RegisterPlugin(entry, NOWPROTO_DVC_CHANNEL_NAME, &plugin->iface);
+	if (status != CHANNEL_RC_OK)
+		nowproto_terminated(&plugin->iface);
+	return status;
 }
