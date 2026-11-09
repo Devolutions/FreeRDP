@@ -63,171 +63,6 @@ static UINT drdynvc_write_data(drdynvcPlugin* drdynvc, UINT32 ChannelId, const B
 WINPR_ATTR_NODISCARD
 static UINT drdynvc_send(drdynvcPlugin* drdynvc, wStream* s, DVCMAN_CHANNEL_STATS* stats);
 
-#define DRDYNVC_MESSAGE_TASK 1
-
-typedef enum
-{
-	DISPATCHER_STARTING,
-	DISPATCHER_RUNNING,
-	DISPATCHER_STOPPING,
-	DISPATCHER_STOPPED
-} DISPATCHER_STATE;
-
-struct s_drdynvc_dispatcher
-{
-	volatile LONG refs;
-	CRITICAL_SECTION lock;
-	HANDLE stop;
-	DISPATCHER_STATE state;
-	wMessageQueue* queue;
-};
-
-typedef struct
-{
-	pcDrdynvcTaskRun run;
-	pcDrdynvcTaskComplete complete;
-	void* payload;
-} DRDYNVC_TASK;
-
-void freerdp_drdynvc_dispatcher_retain(DrdynvcDispatcher* dispatcher)
-{
-	InterlockedIncrement(&dispatcher->refs);
-}
-
-void freerdp_drdynvc_dispatcher_release(DrdynvcDispatcher* dispatcher)
-{
-	if (dispatcher && (InterlockedDecrement(&dispatcher->refs) == 0))
-	{
-		CloseHandle(dispatcher->stop);
-		DeleteCriticalSection(&dispatcher->lock);
-		free(dispatcher);
-	}
-}
-
-UINT freerdp_drdynvc_dispatcher_acquire(IWTSVirtualChannelManager* manager, DrdynvcDispatcher** out)
-{
-	if (!manager || !out)
-		return ERROR_INVALID_PARAMETER;
-	*out = nullptr;
-	DVCMAN* mgr = (DVCMAN*)manager;
-	drdynvcPlugin* plugin = mgr->drdynvc;
-	if (!plugin->async)
-		return ERROR_NOT_SUPPORTED;
-	/* Initialize runs on the connection owner, before the worker exists. */
-	if (plugin->thread || (plugin->state != DRDYNVC_STATE_INITIAL))
-		return ERROR_INVALID_STATE;
-	if (!plugin->dispatcher)
-	{
-		DrdynvcDispatcher* dispatcher = calloc(1, sizeof(*dispatcher));
-		if (!dispatcher)
-			return ERROR_NOT_ENOUGH_MEMORY;
-		if (!InitializeCriticalSectionEx(&dispatcher->lock, 0, 0))
-		{
-			free(dispatcher);
-			return ERROR_NOT_ENOUGH_MEMORY;
-		}
-		dispatcher->refs = 1;
-		dispatcher->stop = CreateEvent(nullptr, TRUE, FALSE, nullptr);
-		if (!dispatcher->stop)
-		{
-			DeleteCriticalSection(&dispatcher->lock);
-			free(dispatcher);
-			return ERROR_NOT_ENOUGH_MEMORY;
-		}
-		dispatcher->queue = plugin->queue;
-		plugin->dispatcher = dispatcher;
-	}
-	InterlockedIncrement(&plugin->dispatcher->refs);
-	*out = plugin->dispatcher;
-	return CHANNEL_RC_OK;
-}
-
-UINT freerdp_drdynvc_dispatcher_post(DrdynvcDispatcher* dispatcher, pcDrdynvcTaskRun run,
-                                     pcDrdynvcTaskComplete complete, void* payload)
-{
-	if (!dispatcher || !run || !complete)
-		return ERROR_INVALID_PARAMETER;
-	UINT status = ERROR_NOT_CONNECTED;
-	EnterCriticalSection(&dispatcher->lock);
-	if (dispatcher->state == DISPATCHER_STARTING)
-		status = ERROR_NOT_READY;
-	else if (dispatcher->state == DISPATCHER_RUNNING)
-	{
-		DRDYNVC_TASK* task = calloc(1, sizeof(*task));
-		status = ERROR_NOT_ENOUGH_MEMORY;
-		if (task)
-		{
-			task->run = run;
-			task->complete = complete;
-			task->payload = payload;
-			if (MessageQueue_Post(dispatcher->queue, nullptr, DRDYNVC_MESSAGE_TASK, task, nullptr))
-				status = CHANNEL_RC_OK;
-			else
-			{
-				status = ERROR_INTERNAL_ERROR;
-				free(task);
-			}
-		}
-	}
-	LeaveCriticalSection(&dispatcher->lock);
-	return status;
-}
-
-static BOOL drdynvc_dispatcher_running(DrdynvcDispatcher* dispatcher)
-{
-	if (!dispatcher)
-		return TRUE;
-	EnterCriticalSection(&dispatcher->lock);
-	const BOOL running = dispatcher->state == DISPATCHER_RUNNING;
-	LeaveCriticalSection(&dispatcher->lock);
-	return running;
-}
-
-static UINT drdynvc_dispatcher_stop(DrdynvcDispatcher* dispatcher)
-{
-	if (!dispatcher)
-		return CHANNEL_RC_OK;
-	EnterCriticalSection(&dispatcher->lock);
-	if (dispatcher->state != DISPATCHER_STOPPED)
-		dispatcher->state = DISPATCHER_STOPPING;
-	const BOOL signaled = SetEvent(dispatcher->stop);
-	LeaveCriticalSection(&dispatcher->lock);
-	if (!signaled)
-	{
-		WLog_ERR(TAG, "Failed to wake the DVC dispatcher");
-		return ERROR_INTERNAL_ERROR;
-	}
-	return CHANNEL_RC_OK;
-}
-
-static void drdynvc_task_complete(wMessage* message, BOOL execute)
-{
-	DRDYNVC_TASK* task = message->wParam;
-	const UINT status = execute ? task->run(task->payload) : ERROR_OPERATION_ABORTED;
-	task->complete(task->payload, status);
-	free(task);
-}
-
-static void drdynvc_dispatcher_drain(drdynvcPlugin* plugin)
-{
-	/* Admission has closed. Peek releases the queue lock before any completion. */
-	wMessage message = WINPR_C_ARRAY_INIT;
-	int peek = 0;
-	while ((peek = MessageQueue_Peek(plugin->queue, &message, TRUE)) != 0)
-	{
-		if (peek < 0)
-			WLog_ERR(TAG, "Failed to reset queue event while draining");
-		if (message.id == DRDYNVC_MESSAGE_TASK)
-			drdynvc_task_complete(&message, FALSE);
-		else if (message.id == 0)
-			Stream_Release(message.wParam);
-	}
-	EnterCriticalSection(&plugin->dispatcher->lock);
-	plugin->dispatcher->queue = nullptr;
-	plugin->dispatcher->state = DISPATCHER_STOPPED;
-	LeaveCriticalSection(&plugin->dispatcher->lock);
-}
-
 static void dvcman_wtslistener_free(DVCMAN_LISTENER* listener)
 {
 	if (listener)
@@ -663,7 +498,11 @@ static UINT dvcchannel_send_close(DVCMAN_CHANNEL* channel)
 
 	Stream_Write_UINT8(s, (CLOSE_REQUEST_PDU << 4) | 0x02);
 	Stream_Write_UINT32(s, channel->channel_id);
-	return drdynvc_send(drdynvc, s, &channel->stats);
+	/* Nonempty writes also hold this lock. Do not retain it across OnClose. */
+	EnterCriticalSection(&channel->lock);
+	const UINT status = drdynvc_send(drdynvc, s, &channel->stats);
+	LeaveCriticalSection(&channel->lock);
+	return status;
 }
 
 static void check_open_close_receive(DVCMAN_CHANNEL* channel)
@@ -2009,19 +1848,8 @@ static UINT drdynvc_virtual_channel_event_data_received(drdynvcPlugin* drdynvc, 
 
 		if (drdynvc->async)
 		{
-			DrdynvcDispatcher* dispatcher = drdynvc->dispatcher;
-			if (dispatcher)
-				EnterCriticalSection(&dispatcher->lock);
-			const BOOL accepting = !dispatcher || (dispatcher->state < DISPATCHER_STOPPING);
-			const BOOL posted =
-			    accepting && MessageQueue_Post(drdynvc->queue, nullptr, 0, data_in, nullptr);
-			if (dispatcher)
-				LeaveCriticalSection(&dispatcher->lock);
-			if (!posted)
+			if (!MessageQueue_Post(drdynvc->queue, nullptr, 0, (void*)data_in, nullptr))
 			{
-				Stream_Release(data_in);
-				if (!accepting)
-					return CHANNEL_RC_OK; /* Shutdown owns all remaining channel closure. */
 				WLog_Print(drdynvc->log, WLOG_ERROR, "MessageQueue_Post failed!");
 				return ERROR_INTERNAL_ERROR;
 			}
@@ -2103,73 +1931,31 @@ static DWORD WINAPI drdynvc_virtual_channel_client_thread(LPVOID arg)
 		return CHANNEL_RC_BAD_CHANNEL_HANDLE;
 	}
 
-	DrdynvcDispatcher* dispatcher = drdynvc->dispatcher;
-	if (dispatcher)
-	{
-		EnterCriticalSection(&dispatcher->lock);
-		if (dispatcher->state == DISPATCHER_STARTING)
-			dispatcher->state = DISPATCHER_RUNNING;
-		LeaveCriticalSection(&dispatcher->lock);
-	}
-
 	while (1)
 	{
-		if (!drdynvc_dispatcher_running(dispatcher))
-			break;
-		BOOL waited = FALSE;
-		if (dispatcher)
-		{
-			const HANDLE events[] = { dispatcher->stop, MessageQueue_Event(drdynvc->queue) };
-			const DWORD wait = WaitForMultipleObjects(ARRAYSIZE(events), events, FALSE, INFINITE);
-			if (wait == WAIT_OBJECT_0)
-				break;
-			waited = wait == WAIT_OBJECT_0 + 1;
-		}
-		else
-			waited = MessageQueue_Wait(drdynvc->queue);
-		if (!waited)
+		if (!MessageQueue_Wait(drdynvc->queue))
 		{
 			WLog_Print(drdynvc->log, WLOG_ERROR, "MessageQueue_Wait failed!");
 			error = ERROR_INTERNAL_ERROR;
 			break;
 		}
 
-		if (!drdynvc_dispatcher_running(dispatcher))
-			break;
-		const int peek = MessageQueue_Peek(drdynvc->queue, &message, TRUE);
-		if (peek == 0)
+		if (!MessageQueue_Peek(drdynvc->queue, &message, TRUE))
 		{
 			WLog_Print(drdynvc->log, WLOG_ERROR, "MessageQueue_Peek failed!");
 			error = ERROR_INTERNAL_ERROR;
-			break;
-		}
-		/* A negative Peek removed a message but failed to reset the event. */
-		if (peek < 0)
-		{
-			error = ERROR_INTERNAL_ERROR;
-			WLog_Print(drdynvc->log, WLOG_ERROR, "MessageQueue_Peek failed after removal");
-			/* Cancellation callbacks must already observe closed admission. */
-			(void)drdynvc_dispatcher_stop(dispatcher);
-			if (message.id == DRDYNVC_MESSAGE_TASK)
-				drdynvc_task_complete(&message, FALSE);
-			else if (message.id == 0)
-				Stream_Release(message.wParam);
 			break;
 		}
 
 		if (message.id == WMQ_QUIT)
 			break;
 
-		/* The state check claims this operation before the shutdown fence. */
-		const BOOL execute = drdynvc_dispatcher_running(dispatcher);
-		if (message.id == DRDYNVC_MESSAGE_TASK)
-			drdynvc_task_complete(&message, execute);
-		else if (message.id == 0)
+		if (message.id == 0)
 		{
 			UINT32 ThreadingFlags = TRUE;
 			data = (wStream*)message.wParam;
 
-			if (execute && (error = drdynvc_order_recv(drdynvc, data, ThreadingFlags)))
+			if ((error = drdynvc_order_recv(drdynvc, data, ThreadingFlags)))
 			{
 				WLog_Print(drdynvc->log, WLOG_WARN,
 				           "drdynvc_order_recv failed with error %" PRIu32 "!", error);
@@ -2177,14 +1963,6 @@ static DWORD WINAPI drdynvc_virtual_channel_client_thread(LPVOID arg)
 
 			Stream_Release(data);
 		}
-	}
-
-	if (dispatcher)
-	{
-		const UINT status = drdynvc_dispatcher_stop(dispatcher);
-		if (status != CHANNEL_RC_OK)
-			error = status;
-		drdynvc_dispatcher_drain(drdynvc);
 	}
 
 	{
@@ -2210,12 +1988,7 @@ static void drdynvc_queue_object_free(void* obj)
 	wMessage* msg = (wMessage*)obj;
 
 	if (!msg || (msg->id != 0))
-	{
-		/* Accepted tasks must be executed/cancelled before plugin termination,
-		 * never by MessageQueue_Clear under its lock. */
-		WINPR_ASSERT(!msg || (msg->id != DRDYNVC_MESSAGE_TASK));
 		return;
-	}
 
 	s = (wStream*)msg->wParam;
 
@@ -2290,7 +2063,6 @@ static UINT drdynvc_virtual_channel_event_connected(drdynvcPlugin* drdynvc, LPVO
 	}
 
 	WINPR_ASSERT(drdynvc->rdpcontext);
-	drdynvc->state = DRDYNVC_STATE_INITIAL;
 	settings = drdynvc->rdpcontext->settings;
 	WINPR_ASSERT(settings);
 
@@ -2328,12 +2100,6 @@ static UINT drdynvc_virtual_channel_event_connected(drdynvcPlugin* drdynvc, LPVO
 	}
 
 error:
-	if (error && drdynvc->dispatcher)
-	{
-		const UINT status = drdynvc_dispatcher_stop(drdynvc->dispatcher);
-		if (status != CHANNEL_RC_OK)
-			return status;
-	}
 	return error;
 }
 
@@ -2350,16 +2116,10 @@ static UINT drdynvc_virtual_channel_event_disconnected(drdynvcPlugin* drdynvc)
 	if (!drdynvc)
 		return CHANNEL_RC_BAD_CHANNEL_HANDLE;
 
-	if ((drdynvc->OpenHandle == 0) && !drdynvc->dispatcher)
+	if (drdynvc->OpenHandle == 0)
 		return CHANNEL_RC_OK;
 
-	if (drdynvc->dispatcher)
-	{
-		status = drdynvc_dispatcher_stop(drdynvc->dispatcher);
-		if (status != CHANNEL_RC_OK)
-			return status;
-	}
-	else if (drdynvc->queue)
+	if (drdynvc->queue)
 	{
 		if (!MessageQueue_PostQuit(drdynvc->queue, 0))
 		{
@@ -2375,8 +2135,6 @@ static UINT drdynvc_virtual_channel_event_disconnected(drdynvcPlugin* drdynvc)
 		if (WaitForSingleObject(drdynvc->thread, INFINITE) != WAIT_OBJECT_0)
 		{
 			status = GetLastError();
-			if (status == CHANNEL_RC_OK)
-				status = ERROR_INTERNAL_ERROR;
 			WLog_Print(drdynvc->log, WLOG_ERROR,
 			           "WaitForSingleObject failed with error %" PRIu32 "", status);
 			return status;
@@ -2387,8 +2145,6 @@ static UINT drdynvc_virtual_channel_event_disconnected(drdynvcPlugin* drdynvc)
 	}
 	else
 	{
-		if (drdynvc->dispatcher)
-			drdynvc_dispatcher_drain(drdynvc);
 		{
 			/* Disconnect remaining dynamic channels that the server did not.
 			 * This is required to properly shut down channels by calling the appropriate
@@ -2399,22 +2155,17 @@ static UINT drdynvc_virtual_channel_event_disconnected(drdynvcPlugin* drdynvc)
 		}
 	}
 
-	if (drdynvc->OpenHandle != 0)
+	WINPR_ASSERT(drdynvc->channelEntryPoints.pVirtualChannelCloseEx);
+	status = drdynvc->channelEntryPoints.pVirtualChannelCloseEx(drdynvc->InitHandle,
+	                                                            drdynvc->OpenHandle);
+
+	if (status != CHANNEL_RC_OK)
 	{
-		WINPR_ASSERT(drdynvc->channelEntryPoints.pVirtualChannelCloseEx);
-		status = drdynvc->channelEntryPoints.pVirtualChannelCloseEx(drdynvc->InitHandle,
-		                                                            drdynvc->OpenHandle);
-		if (status != CHANNEL_RC_OK)
-		{
-			WLog_Print(drdynvc->log, WLOG_ERROR,
-			           "pVirtualChannelClose failed with %s [%08" PRIX32 "]",
-			           WTSErrorToString(status), status);
-		}
+		WLog_Print(drdynvc->log, WLOG_ERROR, "pVirtualChannelClose failed with %s [%08" PRIX32 "]",
+		           WTSErrorToString(status), status);
 	}
 
 	dvcman_clear(drdynvc, drdynvc->channel_mgr);
-	freerdp_drdynvc_dispatcher_release(drdynvc->dispatcher);
-	drdynvc->dispatcher = nullptr;
 	if (drdynvc->queue)
 		MessageQueue_Clear(drdynvc->queue);
 	drdynvc->OpenHandle = 0;
@@ -2424,8 +2175,6 @@ static UINT drdynvc_virtual_channel_event_disconnected(drdynvcPlugin* drdynvc)
 		Stream_Release(drdynvc->data_in);
 		drdynvc->data_in = nullptr;
 	}
-	drdynvc->firstFlagReceived = FALSE;
-	drdynvc->totalLength = 0;
 
 	return status;
 }
@@ -2440,13 +2189,6 @@ static UINT drdynvc_virtual_channel_event_terminated(drdynvcPlugin* drdynvc)
 {
 	if (!drdynvc)
 		return CHANNEL_RC_BAD_CHANNEL_HANDLE;
-
-	if (drdynvc->dispatcher)
-	{
-		const UINT status = drdynvc_virtual_channel_event_disconnected(drdynvc);
-		if (status != CHANNEL_RC_OK)
-			return status;
-	}
 
 	MessageQueue_Free(drdynvc->queue);
 	drdynvc->queue = nullptr;

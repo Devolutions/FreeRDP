@@ -129,7 +129,6 @@ struct drdynvc_plugin
 	void* InitHandle;
 	DWORD OpenHandle;
 	wMessageQueue* queue;
-	DrdynvcDispatcher* dispatcher;
 
 	DRDYNVC_STATE state;
 	DrdynvcClientContext* context;

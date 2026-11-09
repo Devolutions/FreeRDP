@@ -18,46 +18,51 @@ extern "C"
 	{
 		void* handle;
 		void* custom;
-
 		pcWrite Write;
 		pcRead Read;
 	};
 
-#define NOWPROTO_CLIENT_CALLBACKS_VERSION_2 2
+#define NOWPROTO_CLIENT_CALLBACKS_VERSION_3 3
 
 	typedef struct s_nowproto_endpoint NowProtoEndpoint;
 
 	/**
-	 * One immutable offer identity. Retain before handing to asynchronous work,
-	 * Release when finished. Each operation requires an owned reference; it is
-	 * safe to Release a consumer reference from a reentrant callback.
-	 * SubmitWrite copies nonempty data before returning. RequestClose is locally
-	 * idempotent. Success with *queued=TRUE promises one OperationCompleted;
-	 * success with *queued=FALSE is an already-closed Close, with no callback.
-	 * Failure always sets *queued=FALSE and produces no callback.
-	 * Completion may occur before submission returns on another thread.
-	 * token is returned unchanged and is not dereferenced by native code.
-	 * A closed endpoint survives plugin/session teardown until its last Release.
+	 * One retained offer identity, never a reusable wire ID. Retain before handing
+	 * to asynchronous work; Release every owned reference, even after teardown.
+	 * Operations require an owned reference; do not race the final Release.
+	 *
+	 * Write requires nonempty bytes and synchronously copies/submits them using
+	 * the existing transport. The caller retains the buffer until Write returns.
+	 * Result is native submission status, not delivery/remote acknowledgement.
+	 * After retirement or native closure, Write returns ERROR_NOT_CONNECTED.
+	 * Writes are serialized with each other and native callback destruction.
+	 * Do not call Write inline from a native callback.
+	 *
+	 * Retire is idempotent LOCAL retirement: rejects subsequent writes and
+	 * suppresses future Receive admission. It never calls native Close or emits
+	 * Closed. An already-admitted Receive can run/finish after Retire returns.
+	 * Native closure remains remote/session-owned; Closed still occurs then.
+	 * Retire may wait for an in-flight Write. It is safe inline from a callback,
+	 * but nonblocking actor-side retirement is preferred.
 	 */
 	struct s_nowproto_endpoint
 	{
 		void (*Retain)(NowProtoEndpoint* endpoint);
 		void (*Release)(NowProtoEndpoint* endpoint);
-		UINT (*SubmitWrite)
-		(NowProtoEndpoint* endpoint, const BYTE* data, UINT32 size, void* token, BOOL* queued);
-		UINT (*RequestClose)(NowProtoEndpoint* endpoint, void* token, BOOL* queued);
+		UINT (*Write)(NowProtoEndpoint* endpoint, const BYTE* data, UINT32 size);
+		UINT (*Retire)(NowProtoEndpoint* endpoint);
 	};
 
 	/**
-	 * V2 requires asynchronous DVC mode. Callbacks run on the DVC worker. They must
-	 * only copy/enqueue work, never wait for managed async work or destroy the
-	 * session inline. Reentrant submissions only enqueue, never execute inline.
-	 * No NOW plugin lock is held during callbacks. Core receive/close callbacks
-	 * may hold the channel-table lock; callbacks must remain nonblocking.
-	 * The endpoint and receive buffer are borrowed for the callback duration.
-	 * Offer occurs on OnOpen, after the DVC create response; Closed occurs once
-	 * for every offered endpoint, including disconnect/teardown.
-	 * Keep custom and callback code alive until session teardown has completed.
+	 * Callbacks run on the native DVC callback thread (the drdynvc worker in
+	 * default asynchronous mode). Only copy/enqueue work; never wait for managed
+	 * work, perform inline Write, or destroy the session. No NOW lock is held
+	 * while calling user code; core receive/close may hold channel-table locks.
+	 * Endpoint and receive buffer are borrowed for the callback duration.
+	 * Offer occurs on OnOpen after CREATE response. Closed is native closure,
+	 * once per offered endpoint, including remote/session teardown.
+	 * Keep delegates/custom state alive until native teardown returns, even
+	 * after logical retirement. Use actor generation fencing for queued events.
 	 */
 	typedef struct
 	{
@@ -67,23 +72,18 @@ extern "C"
 		void (*Offer)(void* custom, NowProtoEndpoint* endpoint);
 		void (*Receive)(void* custom, NowProtoEndpoint* endpoint, const BYTE* data, size_t size);
 		void (*Closed)(void* custom, NowProtoEndpoint* endpoint);
-		/* Native operation result or ERROR_OPERATION_ABORTED at shutdown; not a
-		 * transport delivery/remote acknowledgement. May follow Closed. */
-		void (*OperationCompleted)(void* custom, NowProtoEndpoint* endpoint, void* token,
-		                           UINT status);
-	} NowProtoClientCallbacksV2;
+	} NowProtoClientCallbacksV3;
 
 	/**
-	 * Explicit opt-in; the legacy four-pointer context layout is unchanged.
-	 * Call before the first OnOpen (the first OnChannelConnected is early enough).
-	 * The table is copied once and cannot be changed after opt-in or first open.
-	 * V2 allows overlapping offers and replaces legacy Read/Write dispatch:
-	 * legacy Write returns ERROR_INVALID_STATE; only endpoint submissions apply.
-	 * Synchronous/replay mode returns ERROR_NOT_SUPPORTED.
-	 * Without opt-in, the legacy single-channel behavior is preserved.
+	 * Explicit opt-in; legacy four-pointer context layout is unchanged.
+	 * Install once before first OnOpen (first NOW OnChannelConnected is early
+	 * enough); the table is copied/frozen. V3 accepts overlapping offers and
+	 * disables legacy Read/Write (Write returns ERROR_INVALID_STATE).
+	 * No worker dispatcher, global synchronous mode or active native close.
+	 * Legacy mode retains single-channel behavior; Write requires nonempty data.
 	 */
 	FREERDP_API UINT freerdp_nowproto_client_set_callbacks(
-	    NowProtoClientContext* context, const NowProtoClientCallbacksV2* callbacks);
+	    NowProtoClientContext* context, const NowProtoClientCallbacksV3* callbacks);
 
 #ifdef __cplusplus
 }

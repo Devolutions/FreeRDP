@@ -24,7 +24,6 @@
 
 #include <winpr/wtypes.h>
 #include <freerdp/api.h>
-#include <freerdp/dvc.h>
 
 #include <freerdp/channels/drdynvc.h>
 
@@ -38,37 +37,6 @@ extern "C"
 	 */
 
 	typedef struct s_drdynvc_client_context DrdynvcClientContext;
-
-	/**
-	 * Opt-in, connection-scoped asynchronous DVC worker dispatcher.
-	 * Acquire only during plugin Initialize, with that callback's live manager.
-	 * Synchronous/replay mode is unsupported (ERROR_NOT_SUPPORTED).
-	 * Release the acquired reference when finished. Retained dispatchers survive
-	 * teardown inertly, reject posts, and never attach to a subsequent connection.
-	 * Post/Retain require an owned reference; do not race the final Release.
-	 *
-	 * Post always queues, even from the worker. Success transfers payload ownership:
-	 * exactly one Complete runs on the worker, with Run's result or
-	 * ERROR_OPERATION_ABORTED if shutdown prevents execution. Run/Complete must
-	 * not block on managed work or destroy the session inline. No dispatcher or
-	 * queue lock is held during either callback. Run must return normally.
-	 * Completion may precede Post's return on another thread.
-	 * Rejected posts transfer no ownership and invoke neither callback.
-	 * Posting before worker startup returns ERROR_NOT_READY; after the shutdown
-	 * fence it returns ERROR_NOT_CONNECTED. Complete releases the payload.
-	 * All accepted callbacks finish before plugin Terminated.
-	 */
-	typedef struct s_drdynvc_dispatcher DrdynvcDispatcher;
-	typedef UINT (*pcDrdynvcTaskRun)(void* payload);
-	typedef void (*pcDrdynvcTaskComplete)(void* payload, UINT status);
-
-	FREERDP_API UINT freerdp_drdynvc_dispatcher_acquire(IWTSVirtualChannelManager* manager,
-	                                                    DrdynvcDispatcher** out);
-	FREERDP_API void freerdp_drdynvc_dispatcher_retain(DrdynvcDispatcher* dispatcher);
-	FREERDP_API void freerdp_drdynvc_dispatcher_release(DrdynvcDispatcher* dispatcher);
-	FREERDP_API UINT freerdp_drdynvc_dispatcher_post(DrdynvcDispatcher* dispatcher,
-	                                                 pcDrdynvcTaskRun run,
-	                                                 pcDrdynvcTaskComplete complete, void* payload);
 
 	/** @brief Dynamic channel stats struct. Contains statistic information for a single dynamic
 	 * channel
