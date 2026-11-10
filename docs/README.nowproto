@@ -1,0 +1,174 @@
+NOW native endpoints (V3)
+========================
+
+Scope and compatibility
+------------------------
+
+NOW uses its own dynamic-channel listener. NowProtoClientContext has the layout
+{ handle, custom, Write, Read } and is available through listener-level connected/
+disconnected events. Legacy mode uses Read/Write, rejects a second simultaneous
+offer, and keeps the context session-owned. Write requires nonempty bytes and
+uses the protected write path; zero-length Write is rejected because the raw
+drdynvc transport treats it as Close.
+Callers must stop using the legacy context before native teardown.
+
+Direct V3 opt-in accepts overlapping offers and provides retained per-offer
+identities. It disables legacy dispatch (legacy Write returns ERROR_INVALID_STATE).
+
+Public ABI and registration
+---------------------------
+
+<freerdp/client/nowproto.h> declares:
+
+  UINT freerdp_nowproto_client_set_callbacks(
+      NowProtoClientContext*, const NowProtoClientCallbacksV3*);
+
+  NowProtoClientCallbacksV3:
+    UINT32 size;       // sizeof(NowProtoClientCallbacksV3)
+    UINT32 version;    // NOWPROTO_CLIENT_CALLBACKS_VERSION_3 (3)
+    void* custom;
+    void Offer(void* custom, NowProtoEndpoint* endpoint);
+    void Receive(void* custom, NowProtoEndpoint* endpoint,
+                 const BYTE* data, size_t size);
+    void Closed(void* custom, NowProtoEndpoint* endpoint);
+
+  NowProtoEndpoint (ordered function pointers):
+    void Retain(NowProtoEndpoint*);
+    void Release(NowProtoEndpoint*);
+    UINT Write(NowProtoEndpoint*, const BYTE* data, UINT32 size);
+    UINT Retire(NowProtoEndpoint*);
+
+Native C pointer alignment/size_t and calling conventions apply. Registration
+requires the exact V3 size/version and all callbacks; other tables are rejected.
+The table is copied, installed once, and frozen. Install before first OnOpen:
+the first NOW OnChannelConnected is early enough.
+
+The null-context registration probe returns ERROR_INVALID_PARAMETER (87)
+without dereferencing the table or causing side effects. Native registration
+success is CHANNEL_RC_OK (0). Bindings must surface registration failure and
+report a missing export as unsupported rather than silently using legacy mode.
+
+Offer, write, retirement and native closure
+-------------------------------------------
+
+Each Offer has a distinct endpoint, never a reusable channel ID. Offer occurs on
+OnOpen after CREATE response. Receive and Closed always carry that identity.
+No native code selects a winning replacement or automatically retires its
+predecessor. The listener-level pInterface remains the legacy context.
+
+Callbacks borrow the endpoint and receive buffer. Retain the endpoint before
+handing it to asynchronous work; copy receive bytes. Release every owned
+reference, even after retirement/native teardown. Each operation requires an
+owned reference; do not race the final Release with a new operation.
+Retained tombstones do not retain or dereference the freed plugin/session.
+
+Write takes nonnull/nonempty bytes, copies/submits synchronously through the
+existing native transport, and returns its result. The caller must keep the
+buffer alive until return. No native command queue, token or completion callback
+exists. Null/empty input returns ERROR_INVALID_PARAMETER; retirement/native
+closure returns ERROR_NOT_CONNECTED. Write errors do not synthesize Closed.
+The result is NOT remote acknowledgement or guaranteed wire delivery.
+drdynvc maps some disconnected-send results to success. An admitted write
+can race remote closure and be discarded by the peer.
+
+Retire is idempotent LOCAL retirement. It closes future write/receive admission
+and waits out a write already using the endpoint. It never calls native Close,
+sends CLOSE, or synthesizes Closed. A Receive admitted before concurrent Retire
+may run or finish after Retire returns. Managed actors must fence queued events
+by their own generation/endpoint ownership; callbacks do not publish a winner.
+
+Closed means actual native closure, once per offered endpoint, on remote close
+or normal session teardown. It still occurs after Retire. A retired native
+channel consumes resources until the peer/session closes it; the endpoint
+cannot force a stalled peer to close or reuse that wire ID. Applications can
+accept a replacement with a different wire ID in the meantime.
+
+Asynchronous DVC mode is the default. Callbacks run on the native DVC
+thread (drdynvc worker by default). They only copy/enqueue nonblocking work:
+no inline active Write, managed waits, recursive native pumping or session
+destruction. Retain/Release and Retire are safe from callbacks, but Retire can
+wait for a native write, so actor-side retirement is preferred. No NOW lock is
+held during user callbacks; core receive/close can hold the channel-table lock.
+Root delegates, callback code and custom state until native teardown returns,
+NOT until logical disposal. Closed can release a consumer endpoint reference.
+
+Locking and lifetime
+--------------------
+
+An endpoint-local lock E covers raw Write from pointer validation through return.
+OnClose is called BEFORE native free, and must acquire E to tombstone transport.
+An atomic retired bit closes admission before waiting for E, so producers cannot
+keep admitting new writes during retirement/OnClose. Receive only checks that
+bit; it does not wait behind native writes or call user code with E held.
+
+Nonempty raw Write takes the channel lock C but no channel-table lock T; its
+error paths do not call OnClose. Empty Write can synchronously close,
+so both legacy/direct paths reject it. No path invokes raw Close. Endpoint
+operations touch no plugin or table after obtaining the retained endpoint.
+
+dvcchannel_send_close takes C around the tunnel-type snapshot and drdynvc_send_on,
+then releases it BEFORE OnClose.
+This serializes shared output-stat updates and keeps CLOSE out of the middle
+of fragmented Write submission while preserving tunnel-aware routing.
+
+Lock order is writer E -> C; remote close T -> C (released) -> E.
+No C is held while waiting for E, and writers never need T: no cycle.
+Tunnel send also takes multitransport/EMT locks, but does not invoke
+OnClose. Default async tunnel receive only queues to the existing DVC worker;
+the synchronous mode receives on the main loop, not inline on the EMT thread.
+Normal drdynvc disconnect joins its worker after closing channels, before
+destroying plugin/manager/transport. OnClose therefore waits out retained
+writers before free. Caller-owned session lifecycle must still follow normal
+Disconnect then Terminated; arbitrary concurrent destruction/late transport
+callbacks, inline session destruction, module unload while endpoints retain
+function pointers, and broken OS synchronization are not supported.
+
+Native callbacks can briefly wait for an in-flight native submission; producers
+should bound message sizes/outstanding work. This is not a hard-real-time or
+lock-free API. No native negotiation, timeouts, admission limits or actor policy.
+
+Building and testing
+--------------------
+
+Use BUILD_TESTING=ON, BUILD_TESTING_INTERNAL=ON, WITH_CLIENT_COMMON=ON and
+CHANNEL_NOWPROTO_CLIENT=ON. BUILD_TESTING_INTERNAL depends on BUILD_TESTING.
+Targets: TestNowProto and TestDrdynvc.
+
+Configure dependencies as described in README.building.md. On macOS, set
+CHANNEL_RDPECAM_CLIENT=OFF if libv4l is unavailable.
+
+  cmake -S . -B build/now-native -DCMAKE_BUILD_TYPE=Debug \
+    -DBUILD_TESTING=ON -DBUILD_TESTING_INTERNAL=ON \
+    -DWITH_CLIENT=OFF -DWITH_CLIENT_COMMON=ON -DCHANNEL_NOWPROTO_CLIENT=ON
+  cmake --build build/now-native --target TestDrdynvc TestNowProto --parallel 4
+  ctest --test-dir build/now-native \
+    -R 'Test(NowProto(Lifetime|Faults)|DrdynvcUnknownChannel)$' \
+    --repeat until-fail:50 --output-on-failure --timeout 60
+
+The async cases use the default setting and real worker/PDU dispatch, with a
+test-only barrier listener. Coverage includes legacy ABI, overlap,
+stale/reused IDs, retirement without native CLOSE/Closed, receive suppression,
+already-admitted callbacks, reentrant retirement/reference release, transport
+errors/pre-OnOpen discard, forced fragmented-write/remote-close ordering,
+retire/write and disconnect/write overlap, repeated concurrent producers versus
+remote close, retained tombstones after teardown/reconnect, and a separate
+synchronous-mode compatibility case. NOW-local fault shims cover allocation,
+critical-section init, callback-table validation/copying and failure cleanup.
+Fault injection is local to the tests.
+
+For ASan/UBSan, configure a separate build with the same options and
+CMAKE_C_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer" and
+CMAKE_EXE_LINKER_FLAGS/CMAKE_SHARED_LINKER_FLAGS="-fsanitize=address,undefined".
+On macOS, use WITH_UNICODE_BUILTIN=OFF to avoid unrelated Unicode sanitizer
+failures and disable LeakSanitizer:
+
+  cmake --build build/now-native-asan --target TestDrdynvc TestNowProto --parallel 4
+  ASAN_OPTIONS=detect_leaks=0 UBSAN_OPTIONS=halt_on_error=1 \
+    ctest --test-dir build/now-native-asan \
+      -R 'Test(NowProto(Lifetime|Faults)|DrdynvcUnknownChannel)$' \
+      --repeat until-fail:20 --output-on-failure --timeout 60
+
+These tests use simulated transport callbacks, not a live server or UDP tunnel.
+They do not validate managed bindings, shipping packages, or Windows/RDM
+supervision parity. Native code provides no active Close, prompt peer cleanup,
+delivery acknowledgement, or actor-owned asynchronous policy.
