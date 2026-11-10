@@ -539,8 +539,12 @@ static UINT dvcchannel_send_close(DVCMAN_CHANNEL* channel)
 
 	Stream_Write_UINT8(s, (CLOSE_REQUEST_PDU << 4) | 0x02);
 	Stream_Write_UINT32(s, channel->channel_id);
-	UINT32 tunnelType = dvcman_channel_get_tunnel(channel);
-	return drdynvc_send_on(drdynvc, s, &channel->stats, &tunnelType, FALSE);
+	/* Nonempty writes also hold this lock. Do not retain it across OnClose. */
+	EnterCriticalSection(&channel->lock);
+	UINT32 tunnelType = channel->tunnelType;
+	const UINT status = drdynvc_send_on(drdynvc, s, &channel->stats, &tunnelType, FALSE);
+	LeaveCriticalSection(&channel->lock);
+	return status;
 }
 
 static void check_open_close_receive(DVCMAN_CHANNEL* channel)
