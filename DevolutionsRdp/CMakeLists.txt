@@ -113,6 +113,10 @@ if(APPLE)
 	if(NOT IOS)
 		find_library(AUDIO_UNIT AudioUnit)
 		target_link_libraries(${MODULE_NAME} PRIVATE "${AUDIO_UNIT}")
+
+		# Conan's imported static WinPR does not propagate its power-status backend dependency.
+		find_library(IOKIT_LIBRARY IOKit REQUIRED)
+		target_link_libraries(${MODULE_NAME} PRIVATE "${IOKIT_LIBRARY}")
 	endif()
 endif()
 
