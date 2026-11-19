@@ -15,9 +15,12 @@
 
 define_channel_client("rdpewa")
 
+find_package(libcbor 0.10.2 REQUIRED MODULE)
+find_package(libfido2 1.14.0 REQUIRED MODULE)
+
 set(${MODULE_PREFIX}_SRCS rdpewa_main.c rdpewa_main.h rdpewa_cbor.c rdpewa_cbor.h rdpewa_fido.c rdpewa_fido.h)
 
-set(${MODULE_PREFIX}_LIBS winpr freerdp ${LIBCBOR_LIBRARIES} ${LIBFIDO2_LIBRARIES})
+set(${MODULE_PREFIX}_LIBS winpr freerdp ${LIBFIDO2_LIBRARY} ${LIBCBOR_LIBRARY})
 
 if(APPLE)
 	find_library(IOKIT_LIBRARY IOKit REQUIRED)
@@ -29,8 +32,5 @@ if(WIN32)
 	list(APPEND ${MODULE_PREFIX}_LIBS setupapi hid)
 endif()
 
-include_directories(..)
-include_directories(${LIBCBOR_INCLUDE_DIRS})
-include_directories(${LIBFIDO2_INCLUDE_DIRS})
-
 add_channel_client_library(${MODULE_PREFIX} ${MODULE_NAME} ${CHANNEL_NAME} TRUE "DVCPluginEntry")
+target_include_directories(${MODULE_NAME} PRIVATE .. ${LIBCBOR_INCLUDE_DIR} ${LIBFIDO2_INCLUDE_DIR})

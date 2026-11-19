@@ -58,7 +58,7 @@ set(TARGET_TYPE "SHARED")
 
 add_library(${MODULE_NAME} ${TARGET_TYPE} ${${MODULE_PREFIX}_HEADERS} ${${MODULE_PREFIX}_SOURCES} ${${MODULE_PREFIX}_RESOURCES})
 
-# Link libraries normally
+target_include_directories(${MODULE_NAME} PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 target_link_libraries(${MODULE_NAME} PRIVATE freerdp freerdp-client winpr)
 
 # Disable section garbage collection to keep all static channel symbols
